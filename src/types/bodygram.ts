@@ -18,7 +18,7 @@ export interface Measurement {
 // 体組成の推定値（体脂肪率・筋肉量など）
 export interface BodyComposition {
   bodyFatPercentage?: number;
-  muscleMass?: number;
+  skeletalMuscleMass?: number;
   [key: string]: number | undefined;
 }
 

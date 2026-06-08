@@ -74,7 +74,7 @@ export default function ScanPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
     if (!form.frontPhoto || !form.sidePhoto) return;
@@ -138,6 +138,7 @@ export default function ScanPage() {
             <p>• タイトな服装（または水着）推奨</p>
             <p>• 背景はシンプルな壁</p>
             <p>• 正面は正面向き、側面は右向きで</p>
+            <p>• 腕は体から少し離し、自然に下ろした状態で撮影</p>
           </div>
 
           {/* Gender */}

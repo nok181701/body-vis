@@ -7,6 +7,17 @@ interface BodygramCredentials {
   organizationId: string;
 }
 
+// Bodygram側がスキャンを失敗と判定したときのエラー（コードを画面表示用に保持する）
+export class ScanFailedError extends Error {
+  code: string;
+
+  constructor(code: string) {
+    super(`Bodygram scan failed: ${code}`);
+    this.name = "ScanFailedError";
+    this.code = code;
+  }
+}
+
 export async function createScan(
   credentials: BodygramCredentials,
   data: CreateScanRequestPhotoFields

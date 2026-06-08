@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { createScanAction } from "@/app/actions/scan-action";
+import { ScanFailedError } from "@/lib/bodygram/api";
 import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
 import type { Scan } from "@/types/bodygram";
 
@@ -29,12 +30,11 @@ function ProcessingContent() {
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const started = useRef(false);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  // Strict Modeでeffectが2回実行されてもAPI呼び出しが1回で済むよう、Promiseをキャッシュする
+  const scanPromiseRef = useRef<Promise<Scan> | null>(null);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-
     const photos = loadScanPhotos();
     if (!photos) {
       router.replace("/scan");
@@ -56,22 +56,26 @@ function ProcessingContent() {
 
     let cancelled = false;
 
-    (async () => {
-      try {
-        const scan = await createScanAction({
-          age,
-          gender,
-          height: Math.round(height * 10), // cm → mm
-          weight: Math.round(weight * 1000), // kg → g
-          frontPhoto: photos.front,
-          rightPhoto: photos.side,
-        });
+    if (!scanPromiseRef.current) {
+      scanPromiseRef.current = createScanAction({
+        age,
+        gender,
+        height: Math.round(height * 10), // cm → mm
+        weight: Math.round(weight * 1000), // kg → g
+        frontPhoto: photos.front,
+        rightPhoto: photos.side,
+      });
+    }
 
+    scanPromiseRef.current
+      .then((scan) => {
         if (cancelled) return;
         clearScanPhotos();
 
         const bodyFatPct = scan.bodyComposition?.bodyFatPercentage;
-        const muscleMass = scan.bodyComposition?.muscleMass;
+        const skeletalMuscleMass = scan.bodyComposition?.skeletalMuscleMass;
+        const muscleMass =
+          skeletalMuscleMass !== undefined ? skeletalMuscleMass / 1000 : undefined; // g → kg
         const waist = findMeasurementCm(scan, "waist");
         const shoulderWidth = findMeasurementCm(scan, "shoulder");
 
@@ -89,15 +93,21 @@ function ProcessingContent() {
         setStepIndex(STEP_LABELS.length - 1);
         setProgress(100);
         setTimeout(() => router.push(`/scan/result?${params.toString()}`), 400);
-      } catch (e) {
+      })
+      .catch((e) => {
         if (cancelled) return;
         clearScanPhotos();
-        setError(e instanceof Error ? e.message : "スキャンに失敗しました");
-      } finally {
+        if (e instanceof ScanFailedError) {
+          setError("スキャンに失敗しました");
+          setErrorCode(e.code);
+        } else {
+          setError(e instanceof Error ? e.message : "スキャンに失敗しました");
+        }
+      })
+      .finally(() => {
         clearInterval(stepTimer);
         clearInterval(progressTimer);
-      }
-    })();
+      });
 
     return () => {
       cancelled = true;
@@ -113,6 +123,9 @@ function ProcessingContent() {
           <p className="text-4xl">⚠️</p>
           <h1 className="text-xl font-bold">スキャンに失敗しました</h1>
           <p className="text-sm text-zinc-400">{error}</p>
+          {errorCode && (
+            <p className="text-xs text-zinc-600">エラーコード: {errorCode}</p>
+          )}
           <Link
             href="/scan"
             className="inline-block py-3 px-8 rounded-full bg-lime-400 text-black font-bold text-sm hover:bg-lime-300 transition-colors"
