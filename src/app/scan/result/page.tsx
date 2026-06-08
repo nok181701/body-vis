@@ -24,26 +24,33 @@ function ScanResultContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const parseOptional = (key: string): number | undefined => {
+    const raw = searchParams.get(key);
+    if (raw === null) return undefined;
+    const value = parseFloat(raw);
+    return isNaN(value) ? undefined : value;
+  };
+
   const gender = searchParams.get("gender") ?? "male";
   const height = parseFloat(searchParams.get("height") ?? "170");
   const weight = parseFloat(searchParams.get("weight") ?? "70");
   const age = parseInt(searchParams.get("age") ?? "25");
-  const bodyFatPct = parseFloat(searchParams.get("bodyFatPct") ?? "20");
-  const muscleMass = parseFloat(searchParams.get("muscleMass") ?? "30");
-  const waist = parseFloat(searchParams.get("waist") ?? "80");
-  const shoulderWidth = parseFloat(searchParams.get("shoulderWidth") ?? "42");
+  const bodyFatPct = parseOptional("bodyFatPct");
+  const muscleMass = parseOptional("muscleMass");
+  const waist = parseOptional("waist");
+  const shoulderWidth = parseOptional("shoulderWidth");
 
   const bmi = weight / ((height / 100) ** 2);
-  const fatCategory = getFatCategory(gender, bodyFatPct);
+  const fatCategory = bodyFatPct !== undefined ? getFatCategory(gender, bodyFatPct) : null;
 
   const handleNext = () => {
     const params = new URLSearchParams({
       gender,
       height: height.toString(),
       weight: weight.toString(),
-      bodyFatPct: bodyFatPct.toString(),
-      muscleMass: muscleMass.toString(),
     });
+    if (bodyFatPct !== undefined) params.set("bodyFatPct", bodyFatPct.toString());
+    if (muscleMass !== undefined) params.set("muscleMass", muscleMass.toString());
     router.push(`/goal?${params.toString()}`);
   };
 
@@ -61,21 +68,27 @@ function ScanResultContent() {
         {/* Fat category badge */}
         <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 text-center mb-6">
           <p className="text-xs text-zinc-500 mb-2">体型カテゴリ</p>
-          <p className={`text-4xl font-bold mb-1 ${fatCategory.color}`}>{fatCategory.label}</p>
-          <p className="text-sm text-zinc-400">体脂肪率 {bodyFatPct}%</p>
+          {fatCategory ? (
+            <>
+              <p className={`text-4xl font-bold mb-1 ${fatCategory.color}`}>{fatCategory.label}</p>
+              <p className="text-sm text-zinc-400">体脂肪率 {bodyFatPct}%</p>
+            </>
+          ) : (
+            <p className="text-2xl font-bold text-zinc-500">データなし</p>
+          )}
         </div>
 
         {/* Metrics grid */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <MetricCard
             label="体脂肪率"
-            value={`${bodyFatPct}%`}
+            value={bodyFatPct !== undefined ? `${bodyFatPct}%` : "—"}
             sub="Bodygram解析値"
-            highlight={fatCategory.color}
+            highlight={fatCategory?.color}
           />
           <MetricCard
             label="筋肉量"
-            value={`${muscleMass} kg`}
+            value={muscleMass !== undefined ? `${muscleMass} kg` : "—"}
             sub="推定値"
           />
           <MetricCard
@@ -85,17 +98,21 @@ function ScanResultContent() {
           />
           <MetricCard
             label="ウエスト"
-            value={`${waist} cm`}
+            value={waist !== undefined ? `${waist} cm` : "—"}
             sub="推定値"
           />
           <MetricCard
             label="肩幅"
-            value={`${shoulderWidth} cm`}
+            value={shoulderWidth !== undefined ? `${shoulderWidth} cm` : "—"}
             sub="推定値"
           />
           <MetricCard
             label="除脂肪体重"
-            value={`${(weight * (1 - bodyFatPct / 100)).toFixed(1)} kg`}
+            value={
+              bodyFatPct !== undefined
+                ? `${(weight * (1 - bodyFatPct / 100)).toFixed(1)} kg`
+                : "—"
+            }
             sub="脂肪以外の体重"
           />
         </div>

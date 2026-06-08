@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { fileToBase64, saveScanPhotos } from "@/lib/scan-photo-storage";
 
 type Gender = "male" | "female";
 
@@ -37,6 +38,7 @@ export default function ScanPage() {
   const [previews, setPreviews] = useState<PhotoPreview>({ front: null, side: null });
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData | "consent", string>>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   const handlePhotoChange = useCallback(
     (type: "front" | "side") => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,14 +77,27 @@ export default function ScanPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    if (!form.frontPhoto || !form.sidePhoto) return;
 
-    const params = new URLSearchParams({
-      gender: form.gender,
-      height: form.height,
-      weight: form.weight,
-      age: form.age,
-    });
-    router.push(`/scan/processing?${params.toString()}`);
+    setSubmitting(true);
+    try {
+      const [front, side] = await Promise.all([
+        fileToBase64(form.frontPhoto),
+        fileToBase64(form.sidePhoto),
+      ]);
+      saveScanPhotos({ front, side });
+
+      const params = new URLSearchParams({
+        gender: form.gender,
+        height: form.height,
+        weight: form.weight,
+        age: form.age,
+      });
+      router.push(`/scan/processing?${params.toString()}`);
+    } catch {
+      setErrors((prev) => ({ ...prev, frontPhoto: "写真の読み込みに失敗しました。もう一度お試しください" }));
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -200,9 +215,10 @@ export default function ScanPage() {
 
           <button
             type="submit"
-            className="w-full py-4 rounded-full bg-lime-400 text-black font-bold text-base hover:bg-lime-300 transition-colors"
+            disabled={submitting}
+            className="w-full py-4 rounded-full bg-lime-400 text-black font-bold text-base hover:bg-lime-300 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            スキャンを開始する
+            {submitting ? "写真を準備中..." : "スキャンを開始する"}
           </button>
         </form>
       </div>
