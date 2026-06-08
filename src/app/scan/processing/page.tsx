@@ -1,65 +1,141 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
+import { createScanAction } from "@/app/actions/scan-action";
+import { ScanFailedError } from "@/lib/bodygram/api";
+import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
+import type { Scan } from "@/types/bodygram";
 
-const STEPS = [
-  { label: "写真を受信中...", duration: 1500 },
-  { label: "体型を解析中...", duration: 4000 },
-  { label: "体脂肪率を計算中...", duration: 3000 },
-  { label: "筋肉量を算出中...", duration: 2500 },
-  { label: "データを整理中...", duration: 1500 },
+const STEP_LABELS = [
+  "写真を送信中...",
+  "体型を解析中...",
+  "体脂肪率を計算中...",
+  "筋肉量を算出中...",
+  "データを整理中...",
 ];
+
+function findMeasurementCm(scan: Scan, keyword: string): number | undefined {
+  const measurement = scan.measurements?.find((m) =>
+    m.name.toLowerCase().includes(keyword)
+  );
+  return measurement ? measurement.value / 10 : undefined; // mm → cm
+}
 
 function ProcessingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  // Strict Modeでeffectが2回実行されてもAPI呼び出しが1回で済むよう、Promiseをキャッシュする
+  const scanPromiseRef = useRef<Promise<Scan> | null>(null);
 
   useEffect(() => {
-    let elapsed = 0;
-    const total = STEPS.reduce((sum, s) => sum + s.duration, 0);
+    const photos = loadScanPhotos();
+    if (!photos) {
+      router.replace("/scan");
+      return;
+    }
 
-    const intervals: ReturnType<typeof setInterval>[] = [];
+    const gender = (searchParams.get("gender") ?? "male") as "male" | "female";
+    const height = parseFloat(searchParams.get("height") ?? "0");
+    const weight = parseFloat(searchParams.get("weight") ?? "0");
+    const age = parseInt(searchParams.get("age") ?? "0");
 
-    let cumulative = 0;
-    STEPS.forEach((step, i) => {
-      const delay = cumulative;
-      cumulative += step.duration;
-      const t = setTimeout(() => setStepIndex(i), delay);
-      intervals.push(t as unknown as ReturnType<typeof setInterval>);
-    });
+    // 演出用：実際のAPI待機中はゆっくり進める（完了したら100%にする）
+    const stepTimer = setInterval(() => {
+      setStepIndex((i) => Math.min(i + 1, STEP_LABELS.length - 1));
+    }, 3500);
+    const progressTimer = setInterval(() => {
+      setProgress((p) => Math.min(p + 1, 95));
+    }, 350);
 
-    const progressInterval = setInterval(() => {
-      elapsed += 100;
-      setProgress(Math.min(Math.floor((elapsed / total) * 100), 99));
-      if (elapsed >= total) {
-        clearInterval(progressInterval);
-      }
-    }, 100);
+    let cancelled = false;
 
-    const done = setTimeout(() => {
-      const params = new URLSearchParams({
-        gender: searchParams.get("gender") ?? "male",
-        height: searchParams.get("height") ?? "",
-        weight: searchParams.get("weight") ?? "",
-        age: searchParams.get("age") ?? "",
-        bodyFatPct: "18.5",
-        muscleMass: "34.2",
-        waist: "78.0",
-        shoulderWidth: "42.5",
+    if (!scanPromiseRef.current) {
+      scanPromiseRef.current = createScanAction({
+        age,
+        gender,
+        height: Math.round(height * 10), // cm → mm
+        weight: Math.round(weight * 1000), // kg → g
+        frontPhoto: photos.front,
+        rightPhoto: photos.side,
       });
-      router.push(`/scan/result?${params.toString()}`);
-    }, total + 500);
+    }
+
+    scanPromiseRef.current
+      .then((scan) => {
+        if (cancelled) return;
+        clearScanPhotos();
+
+        const bodyFatPct = scan.bodyComposition?.bodyFatPercentage;
+        const skeletalMuscleMass = scan.bodyComposition?.skeletalMuscleMass;
+        const muscleMass =
+          skeletalMuscleMass !== undefined ? skeletalMuscleMass / 1000 : undefined; // g → kg
+        const waist = findMeasurementCm(scan, "waist");
+        const shoulderWidth = findMeasurementCm(scan, "shoulder");
+
+        const params = new URLSearchParams({
+          gender,
+          height: height.toString(),
+          weight: weight.toString(),
+          age: age.toString(),
+        });
+        if (bodyFatPct !== undefined) params.set("bodyFatPct", bodyFatPct.toString());
+        if (muscleMass !== undefined) params.set("muscleMass", muscleMass.toString());
+        if (waist !== undefined) params.set("waist", waist.toString());
+        if (shoulderWidth !== undefined) params.set("shoulderWidth", shoulderWidth.toString());
+
+        setStepIndex(STEP_LABELS.length - 1);
+        setProgress(100);
+        setTimeout(() => router.push(`/scan/result?${params.toString()}`), 400);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        clearScanPhotos();
+        if (e instanceof ScanFailedError) {
+          setError("スキャンに失敗しました");
+          setErrorCode(e.code);
+        } else {
+          setError(e instanceof Error ? e.message : "スキャンに失敗しました");
+        }
+      })
+      .finally(() => {
+        clearInterval(stepTimer);
+        clearInterval(progressTimer);
+      });
 
     return () => {
-      intervals.forEach(clearTimeout);
-      clearInterval(progressInterval);
-      clearTimeout(done);
+      cancelled = true;
+      clearInterval(stepTimer);
+      clearInterval(progressTimer);
     };
   }, [router, searchParams]);
+
+  if (error) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <div className="max-w-sm w-full text-center space-y-6">
+          <p className="text-4xl">⚠️</p>
+          <h1 className="text-xl font-bold">スキャンに失敗しました</h1>
+          <p className="text-sm text-zinc-400">{error}</p>
+          {errorCode && (
+            <p className="text-xs text-zinc-600">エラーコード: {errorCode}</p>
+          )}
+          <Link
+            href="/scan"
+            className="inline-block py-3 px-8 rounded-full bg-lime-400 text-black font-bold text-sm hover:bg-lime-300 transition-colors"
+          >
+            やり直す
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
@@ -93,7 +169,7 @@ function ProcessingContent() {
 
         {/* Step list */}
         <div className="space-y-3 text-left">
-          {STEPS.map((step, i) => (
+          {STEP_LABELS.map((label, i) => (
             <div key={i} className="flex items-center gap-3">
               <div
                 className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-all duration-300 ${
@@ -111,7 +187,7 @@ function ProcessingContent() {
                   i <= stepIndex ? "text-white" : "text-zinc-600"
                 }`}
               >
-                {step.label}
+                {label}
               </span>
             </div>
           ))}
