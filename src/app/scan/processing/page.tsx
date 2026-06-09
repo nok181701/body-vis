@@ -4,25 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { createScanAction } from "@/app/actions/scan-action";
-import { ScanFailedError } from "@/lib/bodygram/api";
 import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
-import type { Scan } from "@/types/bodygram";
 
 const STEP_LABELS = [
-  "写真を送信中...",
-  "体型を解析中...",
+  "写真を読み込み中...",
+  "ポーズを検出中...",
+  "体型を推定中...",
   "体脂肪率を計算中...",
-  "筋肉量を算出中...",
   "データを整理中...",
 ];
-
-function findMeasurementCm(scan: Scan, keyword: string): number | undefined {
-  const measurement = scan.measurements?.find((m) =>
-    m.name.toLowerCase().includes(keyword)
-  );
-  return measurement ? measurement.value / 10 : undefined; // mm → cm
-}
 
 function ProcessingContent() {
   const router = useRouter();
@@ -30,9 +20,8 @@ function ProcessingContent() {
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
-  // Strict Modeでeffectが2回実行されてもAPI呼び出しが1回で済むよう、Promiseをキャッシュする
-  const scanPromiseRef = useRef<Promise<Scan> | null>(null);
+  // Strict Modeで2回実行されても処理が重複しないようPromiseをキャッシュする
+  const processingPromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     const photos = loadScanPhotos();
@@ -46,38 +35,26 @@ function ProcessingContent() {
     const weight = parseFloat(searchParams.get("weight") ?? "0");
     const age = parseInt(searchParams.get("age") ?? "0");
 
-    // 演出用：実際のAPI待機中はゆっくり進める（完了したら100%にする）
     const stepTimer = setInterval(() => {
       setStepIndex((i) => Math.min(i + 1, STEP_LABELS.length - 1));
-    }, 3500);
+    }, 800);
     const progressTimer = setInterval(() => {
-      setProgress((p) => Math.min(p + 1, 95));
-    }, 350);
+      setProgress((p) => Math.min(p + 2, 95));
+    }, 100);
 
     let cancelled = false;
 
-    if (!scanPromiseRef.current) {
-      scanPromiseRef.current = createScanAction({
-        age,
-        gender,
-        height: Math.round(height * 10), // cm → mm
-        weight: Math.round(weight * 1000), // kg → g
-        frontPhoto: photos.front,
-        rightPhoto: photos.side,
+    // TODO: MediaPipe + 推定モデルによる体型解析に置き換える
+    if (!processingPromiseRef.current) {
+      processingPromiseRef.current = new Promise<void>((resolve) => {
+        setTimeout(resolve, 4000);
       });
     }
 
-    scanPromiseRef.current
-      .then((scan) => {
+    processingPromiseRef.current
+      .then(() => {
         if (cancelled) return;
         clearScanPhotos();
-
-        const bodyFatPct = scan.bodyComposition?.bodyFatPercentage;
-        const skeletalMuscleMass = scan.bodyComposition?.skeletalMuscleMass;
-        const muscleMass =
-          skeletalMuscleMass !== undefined ? skeletalMuscleMass / 1000 : undefined; // g → kg
-        const waist = findMeasurementCm(scan, "waist");
-        const shoulderWidth = findMeasurementCm(scan, "shoulder");
 
         const params = new URLSearchParams({
           gender,
@@ -85,24 +62,15 @@ function ProcessingContent() {
           weight: weight.toString(),
           age: age.toString(),
         });
-        if (bodyFatPct !== undefined) params.set("bodyFatPct", bodyFatPct.toString());
-        if (muscleMass !== undefined) params.set("muscleMass", muscleMass.toString());
-        if (waist !== undefined) params.set("waist", waist.toString());
-        if (shoulderWidth !== undefined) params.set("shoulderWidth", shoulderWidth.toString());
 
         setStepIndex(STEP_LABELS.length - 1);
         setProgress(100);
         setTimeout(() => router.push(`/scan/result?${params.toString()}`), 400);
       })
-      .catch((e) => {
+      .catch(() => {
         if (cancelled) return;
         clearScanPhotos();
-        if (e instanceof ScanFailedError) {
-          setError("スキャンに失敗しました");
-          setErrorCode(e.code);
-        } else {
-          setError(e instanceof Error ? e.message : "スキャンに失敗しました");
-        }
+        setError("解析に失敗しました。もう一度お試しください。");
       })
       .finally(() => {
         clearInterval(stepTimer);
@@ -121,11 +89,8 @@ function ProcessingContent() {
       <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
         <div className="max-w-sm w-full text-center space-y-6">
           <p className="text-4xl">⚠️</p>
-          <h1 className="text-xl font-bold">スキャンに失敗しました</h1>
+          <h1 className="text-xl font-bold">解析に失敗しました</h1>
           <p className="text-sm text-zinc-400">{error}</p>
-          {errorCode && (
-            <p className="text-xs text-zinc-600">エラーコード: {errorCode}</p>
-          )}
           <Link
             href="/scan"
             className="inline-block py-3 px-8 rounded-full bg-lime-400 text-black font-bold text-sm hover:bg-lime-300 transition-colors"
@@ -164,7 +129,7 @@ function ProcessingContent() {
 
         <div>
           <h1 className="text-2xl font-bold mb-3">体型を解析中</h1>
-          <p className="text-zinc-400 text-sm">完了まで10〜30秒かかります</p>
+          <p className="text-zinc-400 text-sm">完了まで数秒かかります</p>
         </div>
 
         {/* Step list */}

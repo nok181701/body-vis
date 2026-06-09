@@ -13,18 +13,11 @@ interface FormData {
   weight: string;
   age: string;
   frontPhoto: File | null;
-  sidePhoto: File | null;
-}
-
-interface PhotoPreview {
-  front: string | null;
-  side: string | null;
 }
 
 export default function ScanPage() {
   const router = useRouter();
   const frontInputRef = useRef<HTMLInputElement>(null);
-  const sideInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<FormData>({
     gender: "",
@@ -32,28 +25,19 @@ export default function ScanPage() {
     weight: "",
     age: "",
     frontPhoto: null,
-    sidePhoto: null,
   });
 
-  const [previews, setPreviews] = useState<PhotoPreview>({ front: null, side: null });
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData | "consent", string>>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const handlePhotoChange = useCallback(
-    (type: "front" | "side") => (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const url = URL.createObjectURL(file);
-      setPreviews((prev) => ({ ...prev, [type]: url }));
-      setForm((prev) => ({
-        ...prev,
-        [type === "front" ? "frontPhoto" : "sidePhoto"]: file,
-      }));
-    },
-    []
-  );
+  const handlePhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFrontPreview(URL.createObjectURL(file));
+    setForm((prev) => ({ ...prev, frontPhoto: file }));
+  }, []);
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
@@ -68,7 +52,6 @@ export default function ScanPage() {
     if (!form.age || isNaN(a) || a < 10 || a > 100)
       newErrors.age = "年齢を正しく入力してください（10〜100歳）";
     if (!form.frontPhoto) newErrors.frontPhoto = "正面写真を選択してください";
-    if (!form.sidePhoto) newErrors.sidePhoto = "側面写真を選択してください";
     if (!consent) newErrors.consent = "同意が必要です";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -77,15 +60,12 @@ export default function ScanPage() {
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
-    if (!form.frontPhoto || !form.sidePhoto) return;
+    if (!form.frontPhoto) return;
 
     setSubmitting(true);
     try {
-      const [front, side] = await Promise.all([
-        fileToBase64(form.frontPhoto),
-        fileToBase64(form.sidePhoto),
-      ]);
-      saveScanPhotos({ front, side });
+      const front = await fileToBase64(form.frontPhoto);
+      saveScanPhotos({ front });
 
       const params = new URLSearchParams({
         gender: form.gender,
@@ -108,27 +88,41 @@ export default function ScanPage() {
           <p className="text-xs text-lime-400 font-semibold uppercase tracking-widest mb-2">Step 1</p>
           <h1 className="text-3xl font-bold mb-2">体型をスキャン</h1>
           <p className="text-zinc-400 text-sm">
-            写真と基本情報を入力してください。写真はAPIへの送信後、即時廃棄されます。
+            写真と基本情報を入力してください。写真はブラウザ上で解析され、サーバーには保存されません。
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Photo upload */}
-          <div className="grid grid-cols-2 gap-4">
-            <PhotoDropzone
-              label="正面写真"
-              preview={previews.front}
-              inputRef={frontInputRef}
-              onChange={handlePhotoChange("front")}
-              error={errors.frontPhoto}
+          <div>
+            <label className="block text-sm font-medium mb-2">正面写真</label>
+            <button
+              type="button"
+              onClick={() => frontInputRef.current?.click()}
+              className={`w-full aspect-[3/4] max-w-xs mx-auto rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden relative ${
+                errors.frontPhoto
+                  ? "border-red-500/50 bg-red-500/5"
+                  : "border-zinc-700 bg-zinc-900 hover:border-lime-400/50 hover:bg-zinc-800"
+              }`}
+            >
+              {frontPreview ? (
+                <Image src={frontPreview} alt="正面写真" fill className="object-cover" />
+              ) : (
+                <>
+                  <span className="text-3xl">📷</span>
+                  <span className="text-xs text-zinc-400">タップして選択</span>
+                </>
+              )}
+            </button>
+            <input
+              ref={frontInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handlePhotoChange}
             />
-            <PhotoDropzone
-              label="側面写真（右）"
-              preview={previews.side}
-              inputRef={sideInputRef}
-              onChange={handlePhotoChange("side")}
-              error={errors.sidePhoto}
-            />
+            {errors.frontPhoto && <p className="mt-1 text-xs text-red-400">{errors.frontPhoto}</p>}
           </div>
 
           {/* Tips */}
@@ -137,7 +131,7 @@ export default function ScanPage() {
             <p>• 全身が映るよう1.5〜2m離れて撮影</p>
             <p>• タイトな服装（または水着）推奨</p>
             <p>• 背景はシンプルな壁</p>
-            <p>• 正面は正面向き、側面は右向きで</p>
+            <p>• 正面を向いて真っ直ぐ立つ</p>
             <p>• 腕は体から少し離し、自然に下ろした状態で撮影</p>
           </div>
 
@@ -205,8 +199,8 @@ export default function ScanPage() {
                 className="mt-0.5 w-4 h-4 accent-lime-400"
               />
               <span className="text-sm text-zinc-300 leading-relaxed">
-                写真はBodygram社のAPIへ送信され、解析後に廃棄されることを理解しました。
-                体組成データはGemini API（Google）へ送信されることに同意します。
+                写真はブラウザ上でMediaPipeにより解析されます。
+                体組成データおよび写真はGemini API（Google）へ送信されることに同意します。
               </span>
             </label>
             {errors.consent && (
@@ -224,53 +218,6 @@ export default function ScanPage() {
         </form>
       </div>
     </main>
-  );
-}
-
-function PhotoDropzone({
-  label,
-  preview,
-  inputRef,
-  onChange,
-  error,
-}: {
-  label: string;
-  preview: string | null;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  error?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-2">{label}</label>
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className={`w-full aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden relative ${
-          error
-            ? "border-red-500/50 bg-red-500/5"
-            : "border-zinc-700 bg-zinc-900 hover:border-lime-400/50 hover:bg-zinc-800"
-        }`}
-      >
-        {preview ? (
-          <Image src={preview} alt={label} fill className="object-cover" />
-        ) : (
-          <>
-            <span className="text-3xl">📷</span>
-            <span className="text-xs text-zinc-400">タップして選択</span>
-          </>
-        )}
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={onChange}
-      />
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
-    </div>
   );
 }
 

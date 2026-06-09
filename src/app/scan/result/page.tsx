@@ -83,7 +83,7 @@ function ScanResultContent() {
           <MetricCard
             label="体脂肪率"
             value={bodyFatPct !== undefined ? `${bodyFatPct}%` : "—"}
-            sub="Bodygram解析値"
+            sub="MediaPipe推定値"
             highlight={fatCategory?.color}
           />
           <MetricCard
@@ -121,7 +121,7 @@ function ScanResultContent() {
         <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-zinc-400 mb-8">
           <p className="text-white font-medium mb-1">📌 数値について</p>
           <p>
-            これらはBodygram AIによる推定値です。医療診断ではありません。
+            これらはMediaPipe + AIモデルによる推定値です。医療診断ではありません。
             実際の体組成計や医師による計測と異なる場合があります。
           </p>
         </div>
