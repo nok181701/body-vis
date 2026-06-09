@@ -23,12 +23,12 @@ function ResultContent() {
   const muscleDiff = (targetMuscle - currentMuscle).toFixed(1);
 
   return (
-    <main className="min-h-screen px-6 py-12">
+    <main className="min-h-screen px-6 py-12 bg-white">
       <div className="max-w-2xl mx-auto">
         <div className="mb-10 text-center">
-          <p className="text-xs text-lime-400 font-semibold uppercase tracking-widest mb-2">Result</p>
-          <h1 className="text-3xl font-bold mb-2">3ヶ月後のあなた</h1>
-          <p className="text-zinc-400 text-sm">
+          <p className="text-xs text-violet-600 font-semibold uppercase tracking-widest mb-2">Result</p>
+          <h1 className="text-3xl font-bold mb-2 text-slate-900">ビジュアル生成完了</h1>
+          <p className="text-slate-500 text-sm">
             AIが予測した体型ビジュアルです。参考値として活用してください。
           </p>
         </div>
@@ -38,14 +38,14 @@ function ResultContent() {
           <AvatarCard
             label="現在"
             sublabel={`${currentWeight} kg · ${currentFat}%`}
-            color="zinc"
+            isTarget={false}
             emoji={gender === "male" ? "🧍‍♂️" : "🧍‍♀️"}
             fat={currentFat}
           />
           <AvatarCard
             label="目標"
             sublabel={`${targetWeight} kg · ${targetFat}%`}
-            color="lime"
+            isTarget={true}
             emoji={gender === "male" ? "🏋️‍♂️" : "🏋️‍♀️"}
             fat={targetFat}
           />
@@ -53,56 +53,29 @@ function ResultContent() {
 
         {/* Diff summary */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <DiffCard
-            label="体重"
-            diff={`-${weightDiff} kg`}
-            isPositive={parseFloat(weightDiff) > 0}
-          />
-          <DiffCard
-            label="体脂肪率"
-            diff={`-${fatDiff}%`}
-            isPositive={parseFloat(fatDiff) > 0}
-          />
+          <DiffCard label="体重" diff={`-${weightDiff} kg`} positive={parseFloat(weightDiff) > 0} />
+          <DiffCard label="体脂肪率" diff={`-${fatDiff}%`} positive={parseFloat(fatDiff) > 0} />
           <DiffCard
             label="筋肉量"
             diff={parseFloat(muscleDiff) >= 0 ? `+${muscleDiff} kg` : `${muscleDiff} kg`}
-            isPositive={parseFloat(muscleDiff) >= 0}
+            positive={parseFloat(muscleDiff) >= 0}
           />
         </div>
 
         {/* Body composition comparison */}
-        <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 mb-8">
-          <h2 className="font-bold mb-5">体組成の比較</h2>
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm mb-8">
+          <h2 className="font-bold mb-5 text-slate-900">体組成の比較</h2>
           <div className="space-y-4">
-            <CompareBar
-              label="体脂肪率"
-              before={currentFat}
-              after={targetFat}
-              max={gender === "male" ? 40 : 50}
-              unit="%"
-            />
-            <CompareBar
-              label="筋肉量"
-              before={currentMuscle}
-              after={targetMuscle}
-              max={gender === "male" ? 60 : 45}
-              unit="kg"
-              higherIsBetter
-            />
-            <CompareBar
-              label="体重"
-              before={currentWeight}
-              after={targetWeight}
-              max={150}
-              unit="kg"
-            />
+            <CompareBar label="体脂肪率" before={currentFat} after={targetFat} max={gender === "male" ? 40 : 50} unit="%" />
+            <CompareBar label="筋肉量" before={currentMuscle} after={targetMuscle} max={gender === "male" ? 60 : 45} unit="kg" higherIsBetter />
+            <CompareBar label="体重" before={currentWeight} after={targetWeight} max={150} unit="kg" />
           </div>
         </div>
 
         {/* Tips */}
-        <div className="p-5 rounded-2xl border border-lime-400/20 bg-lime-400/5 mb-8">
-          <h3 className="font-bold text-lime-400 mb-3">目標達成のヒント</h3>
-          <ul className="space-y-2 text-sm text-zinc-300">
+        <div className="p-5 rounded-2xl border border-violet-200 bg-violet-50 mb-8">
+          <h3 className="font-bold text-violet-700 mb-3">目標達成のヒント</h3>
+          <ul className="space-y-2 text-sm text-slate-600">
             <li className="flex gap-2">
               <span>💪</span>
               <span>週3〜4回の筋トレで筋肉量を維持しながら減脂を目指しましょう</span>
@@ -120,25 +93,35 @@ function ResultContent() {
           </ul>
         </div>
 
-        {/* Disclaimer */}
-        <p className="text-xs text-zinc-600 text-center mb-8">
+        {/* Try-on optional CTA */}
+        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 mb-8 text-center">
+          <p className="text-sm font-semibold text-slate-700 mb-1">👕 バーチャル試着（オプション）</p>
+          <p className="text-xs text-slate-500 mb-3">服の画像をアップロードして目標体型での試着イメージを生成</p>
+          <Link
+            href="/try-on"
+            className="inline-block py-2 px-6 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
+          >
+            試着してみる
+          </Link>
+        </div>
+
+        <p className="text-xs text-slate-300 text-center mb-8">
           ※ 表示されているアバター画像はAIによる参考イメージです。実際の体型変化とは異なる場合があります。
-          医療・栄養の専門家にご相談ください。
         </p>
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-4">
           <Link
-            href="/scan"
-            className="py-4 rounded-full border border-zinc-700 text-white font-medium text-sm text-center hover:border-zinc-500 transition-colors"
+            href="/adjust"
+            className="py-4 rounded-full border border-slate-200 text-slate-700 font-medium text-sm text-center hover:bg-slate-50 transition-colors"
           >
-            もう一度スキャン
+            調整し直す
           </Link>
           <Link
-            href="/"
-            className="py-4 rounded-full bg-lime-400 text-black font-bold text-sm text-center hover:bg-lime-300 transition-colors"
+            href="/scan"
+            className="py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm text-center hover:opacity-90 transition-opacity"
           >
-            トップに戻る
+            もう一度スキャン
           </Link>
         </div>
       </div>
@@ -147,96 +130,57 @@ function ResultContent() {
 }
 
 function AvatarCard({
-  label,
-  sublabel,
-  color,
-  emoji,
-  fat,
+  label, sublabel, isTarget, emoji, fat,
 }: {
-  label: string;
-  sublabel: string;
-  color: "zinc" | "lime";
-  emoji: string;
-  fat: number;
+  label: string; sublabel: string; isTarget: boolean; emoji: string; fat: number;
 }) {
-  const isLime = color === "lime";
   return (
-    <div
-      className={`rounded-2xl border p-4 text-center ${
-        isLime ? "border-lime-400/30 bg-lime-400/5" : "border-zinc-800 bg-zinc-900"
-      }`}
-    >
-      <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${isLime ? "text-lime-400" : "text-zinc-400"}`}>
+    <div className={`rounded-2xl border p-4 text-center ${isTarget ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-slate-50"}`}>
+      <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${isTarget ? "text-violet-600" : "text-slate-400"}`}>
         {label}
       </p>
-      {/* Placeholder avatar */}
-      <div
-        className={`w-full aspect-[2/3] rounded-xl flex flex-col items-center justify-center mb-3 ${
-          isLime ? "bg-lime-400/10" : "bg-zinc-800"
-        }`}
-      >
+      <div className={`w-full aspect-[2/3] rounded-xl flex flex-col items-center justify-center mb-3 ${isTarget ? "bg-violet-100" : "bg-slate-200"}`}>
         <span className="text-6xl">{emoji}</span>
-        <div className="mt-3 w-16 h-2 rounded-full bg-zinc-700 overflow-hidden">
+        <div className="mt-3 w-16 h-2 rounded-full bg-white/50 overflow-hidden">
           <div
-            className={`h-full rounded-full ${isLime ? "bg-lime-400" : "bg-zinc-500"}`}
+            className={`h-full rounded-full ${isTarget ? "bg-violet-500" : "bg-slate-400"}`}
             style={{ width: `${Math.max(10, 100 - fat * 2)}%` }}
           />
         </div>
-        <p className="text-xs text-zinc-500 mt-1">体脂肪 {fat}%</p>
+        <p className="text-xs text-slate-500 mt-1">体脂肪 {fat}%</p>
       </div>
-      <p className={`text-sm font-medium ${isLime ? "text-lime-400" : "text-zinc-300"}`}>{sublabel}</p>
+      <p className={`text-sm font-medium ${isTarget ? "text-violet-700" : "text-slate-600"}`}>{sublabel}</p>
     </div>
   );
 }
 
-function DiffCard({
-  label,
-  diff,
-  isPositive,
-}: {
-  label: string;
-  diff: string;
-  isPositive: boolean;
-}) {
+function DiffCard({ label, diff, positive }: { label: string; diff: string; positive: boolean }) {
   return (
-    <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-center">
-      <p className="text-xs text-zinc-500 mb-1">{label}</p>
-      <p className={`text-xl font-bold ${isPositive ? "text-lime-400" : "text-red-400"}`}>{diff}</p>
+    <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
+      <p className="text-xs text-slate-400 mb-1">{label}</p>
+      <p className={`text-xl font-bold ${positive ? "text-emerald-600" : "text-orange-500"}`}>{diff}</p>
     </div>
   );
 }
 
 function CompareBar({
-  label,
-  before,
-  after,
-  max,
-  unit,
-  higherIsBetter = false,
+  label, before, after, max, unit, higherIsBetter = false,
 }: {
-  label: string;
-  before: number;
-  after: number;
-  max: number;
-  unit: string;
-  higherIsBetter?: boolean;
+  label: string; before: number; after: number; max: number; unit: string; higherIsBetter?: boolean;
 }) {
   const improved = higherIsBetter ? after > before : after < before;
   return (
     <div>
       <div className="flex justify-between text-sm mb-2">
-        <span className="text-zinc-400">{label}</span>
-        <span className={improved ? "text-lime-400" : "text-zinc-300"}>
+        <span className="text-slate-500">{label}</span>
+        <span className={improved ? "text-emerald-600 font-medium" : "text-slate-600"}>
           {before} → {after.toFixed(1)} {unit}
         </span>
       </div>
-      <div className="relative h-3 bg-zinc-800 rounded-full overflow-hidden">
+      <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className="absolute h-full bg-slate-300 rounded-full transition-all" style={{ width: `${(before / max) * 100}%` }} />
         <div
-          className="absolute h-full bg-zinc-600 rounded-full transition-all"
-          style={{ width: `${(before / max) * 100}%` }}
-        />
-        <div
-          className={`absolute h-full rounded-full transition-all ${improved ? "bg-lime-400" : "bg-orange-400"}`}
+          className={`absolute h-full rounded-full transition-all ${improved ? "bg-violet-500" : "bg-orange-400"}`}
           style={{ width: `${(after / max) * 100}%` }}
         />
       </div>

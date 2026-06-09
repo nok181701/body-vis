@@ -6,17 +6,17 @@ import Link from "next/link";
 
 function getFatCategory(gender: string, pct: number): { label: string; color: string } {
   if (gender === "male") {
-    if (pct < 10) return { label: "アスリート", color: "text-blue-400" };
-    if (pct < 15) return { label: "リーンアスリート", color: "text-lime-400" };
-    if (pct < 20) return { label: "フィット", color: "text-green-400" };
-    if (pct < 25) return { label: "平均的", color: "text-yellow-400" };
-    return { label: "要注意", color: "text-orange-400" };
+    if (pct < 10) return { label: "アスリート", color: "text-sky-600" };
+    if (pct < 15) return { label: "リーンアスリート", color: "text-violet-600" };
+    if (pct < 20) return { label: "フィット", color: "text-emerald-600" };
+    if (pct < 25) return { label: "平均的", color: "text-amber-600" };
+    return { label: "要注意", color: "text-orange-600" };
   } else {
-    if (pct < 18) return { label: "アスリート", color: "text-blue-400" };
-    if (pct < 22) return { label: "フィット", color: "text-lime-400" };
-    if (pct < 28) return { label: "平均的", color: "text-green-400" };
-    if (pct < 35) return { label: "やや多め", color: "text-yellow-400" };
-    return { label: "要注意", color: "text-orange-400" };
+    if (pct < 18) return { label: "アスリート", color: "text-sky-600" };
+    if (pct < 22) return { label: "フィット", color: "text-violet-600" };
+    if (pct < 28) return { label: "平均的", color: "text-emerald-600" };
+    if (pct < 35) return { label: "やや多め", color: "text-amber-600" };
+    return { label: "要注意", color: "text-orange-600" };
   }
 }
 
@@ -48,33 +48,34 @@ function ScanResultContent() {
       gender,
       height: height.toString(),
       weight: weight.toString(),
+      age: age.toString(),
     });
     if (bodyFatPct !== undefined) params.set("bodyFatPct", bodyFatPct.toString());
     if (muscleMass !== undefined) params.set("muscleMass", muscleMass.toString());
-    router.push(`/goal?${params.toString()}`);
+    router.push(`/adjust?${params.toString()}`);
   };
 
   return (
-    <main className="min-h-screen px-6 py-12">
+    <main className="min-h-screen px-6 py-12 bg-white">
       <div className="max-w-lg mx-auto">
         <div className="mb-10">
-          <p className="text-xs text-lime-400 font-semibold uppercase tracking-widest mb-2">Step 2</p>
-          <h1 className="text-3xl font-bold mb-2">スキャン結果</h1>
-          <p className="text-zinc-400 text-sm">
+          <p className="text-xs text-violet-600 font-semibold uppercase tracking-widest mb-2">Step 2</p>
+          <h1 className="text-3xl font-bold mb-2 text-slate-900">スキャン結果</h1>
+          <p className="text-slate-500 text-sm">
             {gender === "male" ? "男性" : "女性"} · {age}歳 · {height}cm · {weight}kg
           </p>
         </div>
 
         {/* Fat category badge */}
-        <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 text-center mb-6">
-          <p className="text-xs text-zinc-500 mb-2">体型カテゴリ</p>
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm text-center mb-6">
+          <p className="text-xs text-slate-400 mb-2">体型カテゴリ</p>
           {fatCategory ? (
             <>
               <p className={`text-4xl font-bold mb-1 ${fatCategory.color}`}>{fatCategory.label}</p>
-              <p className="text-sm text-zinc-400">体脂肪率 {bodyFatPct}%</p>
+              <p className="text-sm text-slate-500">体脂肪率 {bodyFatPct}%</p>
             </>
           ) : (
-            <p className="text-2xl font-bold text-zinc-500">データなし</p>
+            <p className="text-2xl font-bold text-slate-300">データなし</p>
           )}
         </div>
 
@@ -83,8 +84,8 @@ function ScanResultContent() {
           <MetricCard
             label="体脂肪率"
             value={bodyFatPct !== undefined ? `${bodyFatPct}%` : "—"}
-            sub="Bodygram解析値"
-            highlight={fatCategory?.color}
+            sub="MediaPipe推定値"
+            accent={!!fatCategory}
           />
           <MetricCard
             label="筋肉量"
@@ -104,7 +105,7 @@ function ScanResultContent() {
           <MetricCard
             label="肩幅"
             value={shoulderWidth !== undefined ? `${shoulderWidth} cm` : "—"}
-            sub="推定値"
+            sub="MediaPipe計測"
           />
           <MetricCard
             label="除脂肪体重"
@@ -118,24 +119,24 @@ function ScanResultContent() {
         </div>
 
         {/* Note */}
-        <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-zinc-400 mb-8">
-          <p className="text-white font-medium mb-1">📌 数値について</p>
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-500 mb-8">
+          <p className="text-slate-700 font-medium mb-1">📌 数値について</p>
           <p>
-            これらはBodygram AIによる推定値です。医療診断ではありません。
+            MediaPipe + AIモデルによる推定値です。医療診断ではありません。
             実際の体組成計や医師による計測と異なる場合があります。
           </p>
         </div>
 
         <button
           onClick={handleNext}
-          className="w-full py-4 rounded-full bg-lime-400 text-black font-bold text-base hover:bg-lime-300 transition-colors"
+          className="w-full py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-base hover:opacity-90 transition-opacity shadow-md shadow-violet-100"
         >
-          目標を設定する →
+          体型を調整してビジュアル生成 →
         </button>
 
         <Link
           href="/scan"
-          className="block text-center mt-4 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="block text-center mt-4 text-sm text-slate-400 hover:text-slate-600 transition-colors"
         >
           撮り直す
         </Link>
@@ -148,18 +149,18 @@ function MetricCard({
   label,
   value,
   sub,
-  highlight,
+  accent,
 }: {
   label: string;
   value: string;
   sub: string;
-  highlight?: string;
+  accent?: boolean;
 }) {
   return (
-    <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800">
-      <p className="text-xs text-zinc-500 mb-1">{label}</p>
-      <p className={`text-2xl font-bold mb-0.5 ${highlight ?? "text-white"}`}>{value}</p>
-      <p className="text-xs text-zinc-500">{sub}</p>
+    <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+      <p className="text-xs text-slate-400 mb-1">{label}</p>
+      <p className={`text-2xl font-bold mb-0.5 ${accent ? "text-violet-600" : "text-slate-900"}`}>{value}</p>
+      <p className="text-xs text-slate-400">{sub}</p>
     </div>
   );
 }

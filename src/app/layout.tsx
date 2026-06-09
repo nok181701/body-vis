@@ -8,9 +8,9 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "BodyVis - 目標の体型をビジュアルで確認",
+  title: "BodyVis - 体型変化をスライダーで実感",
   description:
-    "体脂肪率・筋肉量の変化にフォーカスし、3ヶ月後の自分の体型をAIでビジュアル化するアプリ",
+    "写真1枚と基本情報を入力するだけで体型データを推定。スライダーで体重・筋肉量を変えてAIが体型変化をビジュアル化。",
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[--background] text-[--foreground]">
+      <body className="min-h-full flex flex-col bg-white text-slate-900">
         {children}
       </body>
     </html>

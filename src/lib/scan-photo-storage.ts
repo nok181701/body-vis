@@ -1,8 +1,12 @@
+/**
+ * スキャン写真を sessionStorage に一時保存・取得・削除する。
+ * 写真はサーバーに送らず、処理完了後に即破棄する。
+ */
+
 const STORAGE_KEY = "bodyvis:scan-photos";
 
 export interface ScanPhotos {
   front: string;
-  side: string;
 }
 
 export function saveScanPhotos(photos: ScanPhotos) {
@@ -23,9 +27,8 @@ export function clearScanPhotos() {
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
-// Bodygram APIが要求する解像度（720x1280〜1080x1920、縦横比9:16）に合わせる
-const TARGET_WIDTH = 1080;
-const TARGET_HEIGHT = 1920;
+// sessionStorage容量とGemini API送信サイズを考慮し、長辺1024px以内にリサイズする
+const MAX_DIMENSION = 1024;
 const JPEG_QUALITY = 0.85;
 
 export function fileToBase64(file: File): Promise<string> {
@@ -34,25 +37,16 @@ export function fileToBase64(file: File): Promise<string> {
     const image = new Image();
 
     image.onload = () => {
-      const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
-      const sourceRatio = image.width / image.height;
-
-      // 縦横比9:16に合わせて中央をクロップする範囲を求める
-      let sx = 0;
-      let sy = 0;
-      let sWidth = image.width;
-      let sHeight = image.height;
-      if (sourceRatio > targetRatio) {
-        sWidth = image.height * targetRatio;
-        sx = (image.width - sWidth) / 2;
-      } else if (sourceRatio < targetRatio) {
-        sHeight = image.width / targetRatio;
-        sy = (image.height - sHeight) / 2;
-      }
+      const scale = Math.min(
+        1,
+        MAX_DIMENSION / Math.max(image.width, image.height),
+      );
+      const width = Math.round(image.width * scale);
+      const height = Math.round(image.height * scale);
 
       const canvas = document.createElement("canvas");
-      canvas.width = TARGET_WIDTH;
-      canvas.height = TARGET_HEIGHT;
+      canvas.width = width;
+      canvas.height = height;
 
       const ctx = canvas.getContext("2d");
       if (!ctx) {
@@ -61,7 +55,7 @@ export function fileToBase64(file: File): Promise<string> {
         return;
       }
 
-      ctx.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+      ctx.drawImage(image, 0, 0, width, height);
       URL.revokeObjectURL(objectUrl);
 
       const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
