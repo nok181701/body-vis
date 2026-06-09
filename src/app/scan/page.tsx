@@ -12,6 +12,9 @@ interface FormData {
   height: string;
   weight: string;
   age: string;
+  neck: string;
+  abdomen: string;
+  hip: string;
   frontPhoto: File | null;
 }
 
@@ -24,6 +27,9 @@ export default function ScanPage() {
     height: "",
     weight: "",
     age: "",
+    neck: "",
+    abdomen: "",
+    hip: "",
     frontPhoto: null,
   });
 
@@ -53,11 +59,26 @@ export default function ScanPage() {
       newErrors.age = "年齢を正しく入力してください（10〜100歳）";
     if (!form.frontPhoto) newErrors.frontPhoto = "正面写真を選択してください";
     if (!consent) newErrors.consent = "同意が必要です";
+
+    // 任意項目のバリデーション（入力した場合のみ）
+    if (form.neck) {
+      const n = parseFloat(form.neck);
+      if (isNaN(n) || n < 20 || n > 60) newErrors.neck = "20〜60cmで入力してください";
+    }
+    if (form.abdomen) {
+      const ab = parseFloat(form.abdomen);
+      if (isNaN(ab) || ab < 40 || ab > 200) newErrors.abdomen = "40〜200cmで入力してください";
+    }
+    if (form.hip && form.gender === "female") {
+      const hp = parseFloat(form.hip);
+      if (isNaN(hp) || hp < 50 || hp > 200) newErrors.hip = "50〜200cmで入力してください";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
     if (!form.frontPhoto) return;
@@ -73,12 +94,18 @@ export default function ScanPage() {
         weight: form.weight,
         age: form.age,
       });
+      if (form.neck) params.set("neck", form.neck);
+      if (form.abdomen) params.set("abdomen", form.abdomen);
+      if (form.hip && form.gender === "female") params.set("hip", form.hip);
+
       router.push(`/scan/processing?${params.toString()}`);
     } catch {
       setErrors((prev) => ({ ...prev, frontPhoto: "写真の読み込みに失敗しました。もう一度お試しください" }));
       setSubmitting(false);
     }
   };
+
+  const hasCircumference = form.neck || form.abdomen || (form.gender === "female" && form.hip);
 
   return (
     <main className="min-h-screen px-6 py-12 bg-white">
@@ -182,6 +209,58 @@ export default function ScanPage() {
               placeholder="25"
               error={errors.age}
             />
+          </div>
+
+          {/* Circumference measurements (optional, Navy method) */}
+          <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700">周囲計測（任意）</p>
+                {hasCircumference && (
+                  <span className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+                    Navy式で計算
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                入力すると米海軍式（Navy式）でより正確に体脂肪率を推定します
+              </p>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className={`grid gap-4 ${form.gender === "female" ? "grid-cols-3" : "grid-cols-2"}`}>
+                <NumberField
+                  label="首回り"
+                  unit="cm"
+                  value={form.neck}
+                  onChange={(v) => setForm((p) => ({ ...p, neck: v }))}
+                  placeholder="38"
+                  error={errors.neck}
+                />
+                <NumberField
+                  label="腹囲"
+                  unit="cm"
+                  value={form.abdomen}
+                  onChange={(v) => setForm((p) => ({ ...p, abdomen: v }))}
+                  placeholder="80"
+                  error={errors.abdomen}
+                />
+                {form.gender === "female" && (
+                  <NumberField
+                    label="ヒップ"
+                    unit="cm"
+                    value={form.hip}
+                    onChange={(v) => setForm((p) => ({ ...p, hip: v }))}
+                    placeholder="90"
+                    error={errors.hip}
+                  />
+                )}
+              </div>
+              <div className="text-xs text-slate-400 space-y-0.5">
+                <p>• 首回り：喉仏の少し下で水平に</p>
+                <p>• 腹囲：へその高さで水平に</p>
+                {form.gender === "female" && <p>• ヒップ：最も太い部分で水平に</p>}
+              </div>
+            </div>
           </div>
 
           {/* Consent */}

@@ -37,6 +37,12 @@ function ProcessingContent() {
     const height = parseFloat(searchParams.get("height") ?? "0");
     const weight = parseFloat(searchParams.get("weight") ?? "0");
     const age = parseInt(searchParams.get("age") ?? "0");
+    const neckRaw = searchParams.get("neck");
+    const abdomenRaw = searchParams.get("abdomen");
+    const hipRaw = searchParams.get("hip");
+    const neck = neckRaw ? parseFloat(neckRaw) : undefined;
+    const abdomen = abdomenRaw ? parseFloat(abdomenRaw) : undefined;
+    const hip = hipRaw ? parseFloat(hipRaw) : undefined;
 
     const progressTimer = setInterval(() => {
       setProgress((p) => Math.min(p + 1, 90));
@@ -49,7 +55,7 @@ function ProcessingContent() {
         setStepIndex(0);
         const ratios = await detectBodyRatios(photos.front);
         setStepIndex(2);
-        const estimated = estimateBody({ gender, height, weight, age }, ratios);
+        const estimated = estimateBody({ gender, height, weight, age, neck, abdomen, hip }, ratios);
         setStepIndex(4);
         return estimated;
       })();
