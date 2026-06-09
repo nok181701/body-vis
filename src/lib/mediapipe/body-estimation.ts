@@ -1,3 +1,7 @@
+/**
+ * MediaPipeの姿勢推定結果とユーザー入力から体組成を推定する。
+ */
+
 import type { BodyRatios } from "./pose";
 import { NAVY, DEURENBERG, BODY, FAT_BOUNDS } from "./const";
 
@@ -7,17 +11,17 @@ export interface UserInput {
   height: number;
   weight: number;
   age: number;
-  neck?: number;    // cm
+  neck?: number; // cm
   abdomen?: number; // cm
-  hip?: number;     // cm、女性のみ
+  hip?: number; // cm、女性のみ
 }
 
 /** 写真解析・推定式から算出した体組成の推定結果 */
 export interface EstimatedBody {
-  bodyFatPct: number;    // %
-  muscleMass: number;    // kg
+  bodyFatPct: number; // %
+  muscleMass: number; // kg
   shoulderWidth: number; // cm
-  waist: number;         // cm
+  waist: number; // cm
   method: "navy" | "deurenberg";
 }
 

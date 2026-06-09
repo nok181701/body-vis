@@ -1,3 +1,8 @@
+/**
+ * MediaPipe PoseLandmarker を使って正面写真から体型比率を検出する。
+ * 肩・腰・足首のランドマーク座標を取得し、肩幅比率などを計算して返す。
+ */
+
 import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
 
 // ポーズから計算した体型比率（正規化座標ベース）

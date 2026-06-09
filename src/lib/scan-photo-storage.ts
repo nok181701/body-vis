@@ -1,3 +1,8 @@
+/**
+ * スキャン写真を sessionStorage に一時保存・取得・削除する。
+ * 写真はサーバーに送らず、処理完了後に即破棄する。
+ */
+
 const STORAGE_KEY = "bodyvis:scan-photos";
 
 export interface ScanPhotos {
@@ -32,7 +37,10 @@ export function fileToBase64(file: File): Promise<string> {
     const image = new Image();
 
     image.onload = () => {
-      const scale = Math.min(1, MAX_DIMENSION / Math.max(image.width, image.height));
+      const scale = Math.min(
+        1,
+        MAX_DIMENSION / Math.max(image.width, image.height),
+      );
       const width = Math.round(image.width * scale);
       const height = Math.round(image.height * scale);
 
