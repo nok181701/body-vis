@@ -2,10 +2,10 @@ import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
 
 // ポーズから計算した体型比率（正規化座標ベース）
 export interface BodyRatios {
-  shoulderWidthRatio: number;  // 肩幅 ÷ 肩〜足首の長さ
-  hipWidthRatio: number;       // 腰幅 ÷ 肩〜足首の長さ
-  torsoHeightRatio: number;    // 胴体長 ÷ 肩〜足首の長さ
-  shoulderToHipRatio: number;  // 肩幅 ÷ 腰幅（逆三角形度）
+  shoulderWidthRatio: number; // 肩幅 ÷ 肩〜足首の長さ
+  hipWidthRatio: number; // 腰幅 ÷ 肩〜足首の長さ
+  torsoHeightRatio: number; // 胴体長 ÷ 肩〜足首の長さ
+  shoulderToHipRatio: number; // 肩幅 ÷ 腰幅（逆三角形度）
 }
 
 // 同一セッションで複数回初期化しないようシングルトンで保持する
@@ -14,9 +14,7 @@ let landmarker: PoseLandmarker | null = null;
 async function getLandmarker(): Promise<PoseLandmarker> {
   if (landmarker) return landmarker;
 
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-  );
+  const vision = await FilesetResolver.forVisionTasks("/mediapipe/wasm");
 
   landmarker = await PoseLandmarker.createFromOptions(vision, {
     baseOptions: {
@@ -41,7 +39,9 @@ function loadImage(base64: string): Promise<HTMLImageElement> {
 }
 
 // 人物が検出できない場合は null を返す（上流で fallback 値を使う）
-export async function detectBodyRatios(base64Image: string): Promise<BodyRatios | null> {
+export async function detectBodyRatios(
+  base64Image: string,
+): Promise<BodyRatios | null> {
   const lm = await getLandmarker();
   const img = await loadImage(base64Image);
 
