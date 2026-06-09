@@ -56,24 +56,24 @@ function GeneratingContent() {
   }, [router, searchParams]);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-white">
       <div className="max-w-sm w-full text-center space-y-10">
         {/* Animated orbs */}
         <div className="relative w-40 h-40 mx-auto">
-          <div className="absolute inset-0 rounded-full bg-lime-400/10 animate-ping" />
-          <div className="absolute inset-4 rounded-full bg-lime-400/20 animate-pulse" />
-          <div className="absolute inset-8 rounded-full bg-lime-400/30 flex items-center justify-center">
-            <span className="text-3xl">🤖</span>
+          <div className="absolute inset-0 rounded-full bg-violet-100 animate-ping opacity-50" />
+          <div className="absolute inset-4 rounded-full bg-violet-200 animate-pulse opacity-70" />
+          <div className="absolute inset-8 rounded-full bg-violet-100 flex items-center justify-center">
+            <span className="text-3xl">✨</span>
           </div>
           {/* Progress ring */}
           <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 160 160">
-            <circle cx="80" cy="80" r="72" fill="none" stroke="#27272a" strokeWidth="6" />
+            <circle cx="80" cy="80" r="72" fill="none" stroke="#ede9fe" strokeWidth="6" />
             <circle
               cx="80"
               cy="80"
               r="72"
               fill="none"
-              stroke="#a3e635"
+              stroke="#7c3aed"
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 72}`}
@@ -84,9 +84,9 @@ function GeneratingContent() {
         </div>
 
         <div>
-          <h1 className="text-2xl font-bold mb-3">AI画像を生成中</h1>
-          <p className="text-zinc-400 text-sm">Gemini AIが体型アバターを作成しています</p>
-          <p className="text-zinc-600 text-xs mt-1">完了まで10〜20秒かかります</p>
+          <h1 className="text-2xl font-bold mb-3 text-slate-900">AI画像を生成中</h1>
+          <p className="text-slate-500 text-sm">Gemini AIが体型アバターを作成しています</p>
+          <p className="text-slate-300 text-xs mt-1">完了まで10〜20秒かかります</p>
         </div>
 
         {/* Step list */}
@@ -96,17 +96,17 @@ function GeneratingContent() {
               <div
                 className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-all duration-300 ${
                   i < stepIndex
-                    ? "bg-lime-400 text-black"
+                    ? "bg-violet-600 text-white"
                     : i === stepIndex
-                    ? "bg-lime-400/20 border border-lime-400 text-lime-400 animate-pulse"
-                    : "bg-zinc-800 text-zinc-600"
+                    ? "bg-violet-100 border border-violet-400 text-violet-600 animate-pulse"
+                    : "bg-slate-100 text-slate-400"
                 }`}
               >
                 {i < stepIndex ? "✓" : i + 1}
               </div>
               <span
                 className={`text-sm transition-colors duration-300 ${
-                  i <= stepIndex ? "text-white" : "text-zinc-600"
+                  i <= stepIndex ? "text-slate-900" : "text-slate-300"
                 }`}
               >
                 {step.label}
@@ -115,7 +115,7 @@ function GeneratingContent() {
           ))}
         </div>
 
-        <p className="text-xs text-zinc-600">
+        <p className="text-xs text-slate-300">
           生成された画像はGemini API（Google）のポリシーに従って処理されます
         </p>
       </div>

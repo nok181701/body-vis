@@ -81,28 +81,27 @@ export default function ScanPage() {
   };
 
   return (
-    <main className="min-h-screen px-6 py-12">
+    <main className="min-h-screen px-6 py-12 bg-white">
       <div className="max-w-lg mx-auto">
-        {/* Header */}
         <div className="mb-10">
-          <p className="text-xs text-lime-400 font-semibold uppercase tracking-widest mb-2">Step 1</p>
-          <h1 className="text-3xl font-bold mb-2">体型をスキャン</h1>
-          <p className="text-zinc-400 text-sm">
-            写真と基本情報を入力してください。写真はブラウザ上で解析され、サーバーには保存されません。
+          <p className="text-xs text-violet-600 font-semibold uppercase tracking-widest mb-2">Step 1</p>
+          <h1 className="text-3xl font-bold mb-2 text-slate-900">体型をスキャン</h1>
+          <p className="text-slate-500 text-sm">
+            写真と基本情報を入力してください。解析はすべてブラウザ上で行われます。
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Photo upload */}
           <div>
-            <label className="block text-sm font-medium mb-2">正面写真</label>
+            <label className="block text-sm font-medium mb-2 text-slate-700">正面写真</label>
             <button
               type="button"
               onClick={() => frontInputRef.current?.click()}
               className={`w-full aspect-[3/4] max-w-xs mx-auto rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden relative ${
                 errors.frontPhoto
-                  ? "border-red-500/50 bg-red-500/5"
-                  : "border-zinc-700 bg-zinc-900 hover:border-lime-400/50 hover:bg-zinc-800"
+                  ? "border-red-300 bg-red-50"
+                  : "border-slate-300 bg-slate-50 hover:border-violet-400 hover:bg-violet-50"
               }`}
             >
               {frontPreview ? (
@@ -110,7 +109,7 @@ export default function ScanPage() {
               ) : (
                 <>
                   <span className="text-3xl">📷</span>
-                  <span className="text-xs text-zinc-400">タップして選択</span>
+                  <span className="text-xs text-slate-400">タップして選択</span>
                 </>
               )}
             </button>
@@ -122,12 +121,12 @@ export default function ScanPage() {
               className="hidden"
               onChange={handlePhotoChange}
             />
-            {errors.frontPhoto && <p className="mt-1 text-xs text-red-400">{errors.frontPhoto}</p>}
+            {errors.frontPhoto && <p className="mt-1 text-xs text-red-500">{errors.frontPhoto}</p>}
           </div>
 
           {/* Tips */}
-          <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-zinc-400 space-y-1">
-            <p className="font-medium text-white mb-2">📌 撮影のコツ</p>
+          <div className="p-4 rounded-xl bg-violet-50 border border-violet-100 text-sm text-slate-600 space-y-1">
+            <p className="font-medium text-violet-700 mb-2">📌 撮影のコツ</p>
             <p>• 全身が映るよう1.5〜2m離れて撮影</p>
             <p>• タイトな服装（または水着）推奨</p>
             <p>• 背景はシンプルな壁</p>
@@ -137,7 +136,7 @@ export default function ScanPage() {
 
           {/* Gender */}
           <div>
-            <label className="block text-sm font-medium mb-3">性別</label>
+            <label className="block text-sm font-medium mb-3 text-slate-700">性別</label>
             <div className="grid grid-cols-2 gap-3">
               {(["male", "female"] as Gender[]).map((g) => (
                 <button
@@ -146,15 +145,15 @@ export default function ScanPage() {
                   onClick={() => setForm((prev) => ({ ...prev, gender: g }))}
                   className={`py-3 rounded-xl border font-medium text-sm transition-colors ${
                     form.gender === g
-                      ? "border-lime-400 bg-lime-400/10 text-lime-400"
-                      : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-600"
+                      ? "border-violet-500 bg-violet-50 text-violet-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
                 >
                   {g === "male" ? "男性" : "女性"}
                 </button>
               ))}
             </div>
-            {errors.gender && <p className="mt-1 text-xs text-red-400">{errors.gender}</p>}
+            {errors.gender && <p className="mt-1 text-xs text-red-500">{errors.gender}</p>}
           </div>
 
           {/* Basic info */}
@@ -188,7 +187,7 @@ export default function ScanPage() {
           {/* Consent */}
           <div
             className={`p-4 rounded-xl border ${
-              errors.consent ? "border-red-500/50 bg-red-500/5" : "border-zinc-800 bg-zinc-900"
+              errors.consent ? "border-red-300 bg-red-50" : "border-slate-200 bg-slate-50"
             }`}
           >
             <label className="flex gap-3 cursor-pointer">
@@ -196,22 +195,22 @@ export default function ScanPage() {
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-lime-400"
+                className="mt-0.5 w-4 h-4 accent-violet-600"
               />
-              <span className="text-sm text-zinc-300 leading-relaxed">
+              <span className="text-sm text-slate-600 leading-relaxed">
                 写真はブラウザ上でMediaPipeにより解析されます。
                 体組成データおよび写真はGemini API（Google）へ送信されることに同意します。
               </span>
             </label>
             {errors.consent && (
-              <p className="mt-2 text-xs text-red-400">{errors.consent}</p>
+              <p className="mt-2 text-xs text-red-500">{errors.consent}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-4 rounded-full bg-lime-400 text-black font-bold text-base hover:bg-lime-300 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-violet-100"
           >
             {submitting ? "写真を準備中..." : "スキャンを開始する"}
           </button>
@@ -238,20 +237,20 @@ function NumberField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium mb-2">{label}</label>
+      <label className="block text-sm font-medium mb-2 text-slate-700">{label}</label>
       <div className="relative">
         <input
           type="number"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={`w-full px-3 py-3 pr-10 rounded-xl bg-zinc-900 border text-sm outline-none focus:border-lime-400 transition-colors ${
-            error ? "border-red-500/50" : "border-zinc-800"
+          className={`w-full px-3 py-3 pr-10 rounded-xl bg-white border text-sm outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-100 transition-colors ${
+            error ? "border-red-300" : "border-slate-200"
           }`}
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">{unit}</span>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{unit}</span>
       </div>
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
 }
