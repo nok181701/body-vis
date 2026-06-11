@@ -64,7 +64,6 @@ function ProcessingContent() {
     processingPromiseRef.current
       .then((estimated) => {
         if (cancelled) return;
-        clearScanPhotos();
 
         const params = new URLSearchParams({
           gender,
