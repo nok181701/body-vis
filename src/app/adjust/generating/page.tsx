@@ -29,7 +29,7 @@ function GeneratingContent() {
 
     const photos = loadScanPhotos();
     if (!photos) {
-      router.replace("/scan");
+      router.replace("/");
       return;
     }
 

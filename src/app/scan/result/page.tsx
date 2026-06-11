@@ -135,7 +135,7 @@ function ScanResultContent() {
         </button>
 
         <Link
-          href="/scan"
+          href="/"
           className="block text-center mt-4 text-sm text-slate-400 hover:text-slate-600 transition-colors"
         >
           撮り直す

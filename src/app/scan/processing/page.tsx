@@ -29,7 +29,7 @@ function ProcessingContent() {
   useEffect(() => {
     const photos = loadScanPhotos();
     if (!photos) {
-      router.replace("/scan");
+      router.replace("/");
       return;
     }
 
@@ -105,7 +105,7 @@ function ProcessingContent() {
           <h1 className="text-xl font-bold text-slate-900">解析に失敗しました</h1>
           <p className="text-sm text-slate-500">{error}</p>
           <Link
-            href="/scan"
+            href="/"
             className="inline-block py-3 px-8 rounded-full bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors"
           >
             やり直す

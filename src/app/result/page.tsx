@@ -108,7 +108,7 @@ function ResultContent() {
             調整し直す
           </Link>
           <Link
-            href="/scan"
+            href="/"
             className="py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm text-center hover:opacity-90 transition-opacity"
           >
             もう一度スキャン
