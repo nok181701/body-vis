@@ -1,11 +1,20 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { clearGeneratedImages, loadGeneratedImages } from "@/lib/generated-image-storage";
 
 function ResultContent() {
   const searchParams = useSearchParams();
+  const [images] = useState<{ currentImage: string; goalImage: string } | null>(() =>
+    typeof window === "undefined" ? null : loadGeneratedImages()
+  );
+
+  useEffect(() => {
+    return () => clearGeneratedImages();
+  }, []);
 
   const gender = searchParams.get("gender") ?? "male";
   const currentWeight = parseFloat(searchParams.get("currentWeight") ?? "70");
@@ -41,6 +50,7 @@ function ResultContent() {
             isTarget={false}
             emoji={gender === "male" ? "🧍‍♂️" : "🧍‍♀️"}
             fat={currentFat}
+            image={images?.currentImage}
           />
           <AvatarCard
             label="目標"
@@ -48,6 +58,7 @@ function ResultContent() {
             isTarget={true}
             emoji={gender === "male" ? "🏋️‍♂️" : "🏋️‍♀️"}
             fat={targetFat}
+            image={images?.goalImage}
           />
         </div>
 
@@ -70,27 +81,6 @@ function ResultContent() {
             <CompareBar label="筋肉量" before={currentMuscle} after={targetMuscle} max={gender === "male" ? 60 : 45} unit="kg" higherIsBetter />
             <CompareBar label="体重" before={currentWeight} after={targetWeight} max={150} unit="kg" />
           </div>
-        </div>
-
-        {/* Tips */}
-        <div className="p-5 rounded-2xl border border-violet-200 bg-violet-50 mb-8">
-          <h3 className="font-bold text-violet-700 mb-3">目標達成のヒント</h3>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li className="flex gap-2">
-              <span>💪</span>
-              <span>週3〜4回の筋トレで筋肉量を維持しながら減脂を目指しましょう</span>
-            </li>
-            <li className="flex gap-2">
-              <span>🥗</span>
-              <span>タンパク質を体重×1.5〜2gを目標に摂取してください</span>
-            </li>
-            <li className="flex gap-2">
-              <span>📉</span>
-              <span>
-                月{((parseFloat(weightDiff)) / 3).toFixed(1)} kgペースで3ヶ月かけて達成するのが健康的です
-              </span>
-            </li>
-          </ul>
         </div>
 
         {/* Try-on optional CTA */}
@@ -130,24 +120,30 @@ function ResultContent() {
 }
 
 function AvatarCard({
-  label, sublabel, isTarget, emoji, fat,
+  label, sublabel, isTarget, emoji, fat, image,
 }: {
-  label: string; sublabel: string; isTarget: boolean; emoji: string; fat: number;
+  label: string; sublabel: string; isTarget: boolean; emoji: string; fat: number; image?: string;
 }) {
   return (
     <div className={`rounded-2xl border p-4 text-center ${isTarget ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-slate-50"}`}>
       <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${isTarget ? "text-violet-600" : "text-slate-400"}`}>
         {label}
       </p>
-      <div className={`w-full aspect-[2/3] rounded-xl flex flex-col items-center justify-center mb-3 ${isTarget ? "bg-violet-100" : "bg-slate-200"}`}>
-        <span className="text-6xl">{emoji}</span>
-        <div className="mt-3 w-16 h-2 rounded-full bg-white/50 overflow-hidden">
-          <div
-            className={`h-full rounded-full ${isTarget ? "bg-violet-500" : "bg-slate-400"}`}
-            style={{ width: `${Math.max(10, 100 - fat * 2)}%` }}
-          />
-        </div>
-        <p className="text-xs text-slate-500 mt-1">体脂肪 {fat}%</p>
+      <div className={`relative w-full aspect-[2/3] rounded-xl flex flex-col items-center justify-center mb-3 overflow-hidden ${isTarget ? "bg-violet-100" : "bg-slate-200"}`}>
+        {image ? (
+          <Image src={image} alt={label} fill className="object-cover" unoptimized />
+        ) : (
+          <>
+            <span className="text-6xl">{emoji}</span>
+            <div className="mt-3 w-16 h-2 rounded-full bg-white/50 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${isTarget ? "bg-violet-500" : "bg-slate-400"}`}
+                style={{ width: `${Math.max(10, 100 - fat * 2)}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">体脂肪 {fat}%</p>
+          </>
+        )}
       </div>
       <p className={`text-sm font-medium ${isTarget ? "text-violet-700" : "text-slate-600"}`}>{sublabel}</p>
     </div>

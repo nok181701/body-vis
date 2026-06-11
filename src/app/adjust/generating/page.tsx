@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
+import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
+import { saveGeneratedImages } from "@/lib/generated-image-storage";
+import { generateAvatar } from "@/lib/gemini/generate-avatar";
+import type { Gender } from "@/lib/gemini/avatar-prompt";
 
 const STEPS = [
-  { label: "体組成データを送信中...", duration: 1500 },
-  { label: "現在の体型アバターを生成中...", duration: 5000 },
-  { label: "目標体型アバターを生成中...", duration: 5000 },
-  { label: "画像を最終調整中...", duration: 2000 },
+  { label: "体組成データを送信中..." },
+  { label: "目標体型アバターを生成中..." },
+  { label: "画像を最終調整中..." },
 ];
 
 function GeneratingContent() {
@@ -16,44 +20,96 @@ function GeneratingContent() {
   const searchParams = useSearchParams();
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const runningRef = useRef(false);
 
   useEffect(() => {
-    let elapsed = 0;
-    const total = STEPS.reduce((sum, s) => sum + s.duration, 0);
+    if (runningRef.current) return;
+    runningRef.current = true;
 
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
-    let cumulative = 0;
-    STEPS.forEach((_, i) => {
-      const delay = cumulative;
-      cumulative += STEPS[i].duration;
-      timeouts.push(setTimeout(() => setStepIndex(i), delay));
+    const photos = loadScanPhotos();
+    if (!photos) {
+      router.replace("/scan");
+      return;
+    }
+
+    const gender = (searchParams.get("gender") ?? "male") as Gender;
+    const height = parseFloat(searchParams.get("height") ?? "170");
+    const currentFat = parseFloat(searchParams.get("currentFat") ?? "20");
+    const targetFat = parseFloat(searchParams.get("targetFat") ?? "15");
+    const currentWeight = parseFloat(searchParams.get("currentWeight") ?? "70");
+    const targetWeight = parseFloat(searchParams.get("targetWeight") ?? "65");
+
+    const params = new URLSearchParams({
+      gender,
+      height: height.toString(),
+      currentWeight: searchParams.get("currentWeight") ?? "70",
+      currentFat: currentFat.toString(),
+      currentMuscle: searchParams.get("currentMuscle") ?? "30",
+      targetWeight: searchParams.get("targetWeight") ?? "65",
+      targetFat: targetFat.toString(),
     });
 
     const progressInterval = setInterval(() => {
-      elapsed += 100;
-      setProgress(Math.min(Math.floor((elapsed / total) * 100), 99));
-      if (elapsed >= total) clearInterval(progressInterval);
-    }, 100);
+      setProgress((p) => Math.min(p + 1, 95));
+    }, 150);
 
-    const done = setTimeout(() => {
-      const params = new URLSearchParams({
-        gender: searchParams.get("gender") ?? "male",
-        height: searchParams.get("height") ?? "170",
-        currentWeight: searchParams.get("currentWeight") ?? "70",
-        currentFat: searchParams.get("currentFat") ?? "20",
-        currentMuscle: searchParams.get("currentMuscle") ?? "30",
-        targetWeight: searchParams.get("targetWeight") ?? "65",
-        targetFat: searchParams.get("targetFat") ?? "15",
+    (async () => {
+      setStepIndex(0);
+
+      setStepIndex(1);
+      const goalResult = await generateAvatar({
+        photo: photos.front,
+        gender,
+        height,
+        bodyFatPct: targetFat,
+        weightKg: currentWeight,
+        weightDiffKg: targetWeight - currentWeight,
       });
-      router.push(`/result?${params.toString()}`);
-    }, total + 500);
+      if (!goalResult.success) {
+        setError(goalResult.error);
+        return;
+      }
+
+      setStepIndex(2);
+      saveGeneratedImages({
+        currentImage: `data:image/jpeg;base64,${photos.front}`,
+        goalImage: `data:image/png;base64,${goalResult.image}`,
+      });
+      clearScanPhotos();
+
+      setProgress(100);
+      setTimeout(() => router.push(`/result?${params.toString()}`), 400);
+    })().catch((e) => {
+      setError(e instanceof Error ? e.message : "画像生成に失敗しました。もう一度お試しください。");
+    }).finally(() => {
+      clearInterval(progressInterval);
+    });
 
     return () => {
-      timeouts.forEach(clearTimeout);
       clearInterval(progressInterval);
-      clearTimeout(done);
     };
   }, [router, searchParams]);
+
+  if (error) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-white">
+        <div className="max-w-sm w-full text-center space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-full bg-red-50 flex items-center justify-center">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h1 className="text-xl font-bold text-slate-900">画像生成に失敗しました</h1>
+          <p className="text-sm text-slate-500">{error}</p>
+          <Link
+            href="/adjust"
+            className="inline-block py-3 px-8 rounded-full bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors"
+          >
+            調整画面に戻る
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-white">
