@@ -253,15 +253,31 @@ await env.DB.prepare(
 #### プロンプト生成関数
 
 ```typescript
-function buildPrompt(gender: Gender, fatPct: number, heightCm: number): string {
+function buildPrompt(
+  gender: Gender,
+  fatPct: number,
+  heightCm: number,
+  currentWeightKg: number,
+  weightDiffKg: number,
+): string {
   const category = getFatCategory(gender, fatPct);
-  return `Edit this photo to realistically change the body composition of the ${gender} person to a ${category.label} physique (${category.description}), based on a height of ${heightCm}cm. Keep the same person, face, identity, pose, clothing, background, and lighting unchanged. The result must remain a photorealistic photo of this exact person, only the body shape should change.`;
+  const roundedDiff = Math.round(Math.abs(weightDiffKg) * 10) / 10;
+  const pct = currentWeightKg > 0 ? Math.round((Math.abs(weightDiffKg) / currentWeightKg) * 100) : 0;
+
+  // 体重差・割合から増減量の説明文を生成（変化なし／減量／増量で分岐）
+  const changeDescription = /* ... */;
+  // 顔・腹部周り・胸と脚それぞれについて、増減方向に応じた変化指示文を生成
+  const faceInstruction = /* ... */;
+  const bodyInstruction = /* ... */;
+  const chestAndLegsInstruction = /* ... */;
+
+  return `Edit this photo to realistically transform the body composition of the ${gender} person to a ${category.label} physique (${category.description}), based on a height of ${heightCm}cm. ${changeDescription} ${faceInstruction} ${bodyInstruction} ${chestAndLegsInstruction} Also clearly change the rest of the body silhouette - shoulders and arms should also visibly reflect this change. This should look like a real, dramatic before/after transformation photo, not a subtle retouch. Keep the same person, identity, pose, clothing, background, and lighting unchanged. The result must remain a photorealistic photo of this exact person, only the body shape and facial fullness should change.`;
 }
 ```
 
-アバターCG生成ではなく、アップロードされた写真をそのまま入力画像としてGemini APIに渡し、**人物・顔・服装・背景はそのまま維持し、体型のみを変化させる**画像編集として生成する。
+アバターCG生成ではなく、アップロードされた写真をそのまま入力画像としてGemini APIに渡し、**人物・顔・服装・背景はそのまま維持し、体型のみを変化させる**画像編集として生成する。体重差（kg・割合）に応じて、顔・腹部/腰回り・胸/脚それぞれの変化を明示的に指示し、ビフォーアフターの違いがはっきり分かるようにする。
 
-`/adjust/generating`では、現在の体脂肪率・目標体脂肪率それぞれでこの関数を呼び出し、現在体型・目標体型の2枚の画像を生成する。
+`/adjust/generating`では、目標体脂肪率に対してこの関数を1回だけ呼び出し目標体型の画像を生成する。「現在」の画像はGeminiで生成せず、アップロードされた元写真をそのまま使用する（Geminiに通すと本人の同一性が崩れるため）。
 
 ### バーチャル試着
 
