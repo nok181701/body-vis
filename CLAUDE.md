@@ -212,24 +212,22 @@ await env.DB.prepare(
 
 | 画面名                | パス               | 概要                                         |
 | --------------------- | ------------------ | -------------------------------------------- |
-| トップ / ランディング | `/`                | サービス説明・利用開始ボタン                 |
-| 写真アップロード      | `/scan`            | 正面写真アップロード・身長体重年齢性別入力   |
+| トップ（写真アップロード） | `/`            | サービス説明・正面写真アップロード・身長体重年齢性別入力 |
 | スキャン処理中        | `/scan/processing` | MediaPipe解析・体型推定モデル処理待機        |
 | 現在の体型確認        | `/scan/result`     | 推定された体組成データ確認                   |
 | 体型調整              | `/adjust`          | スライダーで目標体重・体脂肪率を設定         |
-| 生成中                | `/adjust/generating` | Gemini APIの画像生成待機（現在体型・目標体型の2枚） |
+| 生成中                | `/adjust/generating` | Gemini APIの画像生成待機（目標体型の1枚。現在体型は元写真をそのまま使用） |
 | 結果表示              | `/result`          | ビフォーアフター画像・体組成比較             |
 | バーチャル試着        | `/try-on`          | 服の画像アップロード → 試着画像生成          |
 
 ### ユーザーフロー
 
 ```
-トップ
-  → 写真アップロード（正面）+ 身長・体重・年齢・性別入力
+トップ（簡単な説明 + 写真アップロード（正面）+ 身長・体重・年齢・性別入力）
   → MediaPipe解析 + 推定モデルで体組成推定
   → 現在の体組成データ確認
   → スライダーで目標体重・目標体脂肪率を設定
-  → Gemini API画像生成（現在体型・目標体型）
+  → Gemini API画像生成（目標体型のみ）
   → ビフォーアフター表示
   → バーチャル試着（服の画像をアップロード）
 ```
@@ -253,15 +251,31 @@ await env.DB.prepare(
 #### プロンプト生成関数
 
 ```typescript
-function buildPrompt(gender: Gender, fatPct: number, heightCm: number): string {
+function buildPrompt(
+  gender: Gender,
+  fatPct: number,
+  heightCm: number,
+  currentWeightKg: number,
+  weightDiffKg: number,
+): string {
   const category = getFatCategory(gender, fatPct);
-  return `Edit this photo to realistically change the body composition of the ${gender} person to a ${category.label} physique (${category.description}), based on a height of ${heightCm}cm. Keep the same person, face, identity, pose, clothing, background, and lighting unchanged. The result must remain a photorealistic photo of this exact person, only the body shape should change.`;
+  const roundedDiff = Math.round(Math.abs(weightDiffKg) * 10) / 10;
+  const pct = currentWeightKg > 0 ? Math.round((Math.abs(weightDiffKg) / currentWeightKg) * 100) : 0;
+
+  // 体重差・割合から増減量の説明文を生成（変化なし／減量／増量で分岐）
+  const changeDescription = /* ... */;
+  // 顔・腹部周り・胸と脚それぞれについて、増減方向に応じた変化指示文を生成
+  const faceInstruction = /* ... */;
+  const bodyInstruction = /* ... */;
+  const chestAndLegsInstruction = /* ... */;
+
+  return `Edit this photo to realistically transform the body composition of the ${gender} person to a ${category.label} physique (${category.description}), based on a height of ${heightCm}cm. ${changeDescription} ${faceInstruction} ${bodyInstruction} ${chestAndLegsInstruction} Also clearly change the rest of the body silhouette - shoulders and arms should also visibly reflect this change. This should look like a real, dramatic before/after transformation photo, not a subtle retouch. Keep the same person, identity, pose, clothing, background, and lighting unchanged. The result must remain a photorealistic photo of this exact person, only the body shape and facial fullness should change.`;
 }
 ```
 
-アバターCG生成ではなく、アップロードされた写真をそのまま入力画像としてGemini APIに渡し、**人物・顔・服装・背景はそのまま維持し、体型のみを変化させる**画像編集として生成する。
+アバターCG生成ではなく、アップロードされた写真をそのまま入力画像としてGemini APIに渡し、**人物・顔・服装・背景はそのまま維持し、体型のみを変化させる**画像編集として生成する。体重差（kg・割合）に応じて、顔・腹部/腰回り・胸/脚それぞれの変化を明示的に指示し、ビフォーアフターの違いがはっきり分かるようにする。
 
-`/adjust/generating`では、現在の体脂肪率・目標体脂肪率それぞれでこの関数を呼び出し、現在体型・目標体型の2枚の画像を生成する。
+`/adjust/generating`では、目標体脂肪率に対してこの関数を1回だけ呼び出し目標体型の画像を生成する。「現在」の画像はGeminiで生成せず、アップロードされた元写真をそのまま使用する（Geminiに通すと本人の同一性が崩れるため）。
 
 ### バーチャル試着
 

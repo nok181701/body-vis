@@ -83,8 +83,8 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* Try-on optional CTA */}
-        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 mb-8 text-center">
+        {/* Try-on optional CTA（一旦非表示） */}
+        {/* <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 mb-8 text-center">
           <p className="text-sm font-semibold text-slate-700 mb-1">👕 バーチャル試着（オプション）</p>
           <p className="text-xs text-slate-500 mb-3">服の画像をアップロードして目標体型での試着イメージを生成</p>
           <Link
@@ -93,7 +93,7 @@ function ResultContent() {
           >
             試着してみる
           </Link>
-        </div>
+        </div> */}
 
         <p className="text-xs text-slate-300 text-center mb-8">
           ※ 表示されているアバター画像はAIによる参考イメージです。実際の体型変化とは異なる場合があります。
@@ -108,7 +108,7 @@ function ResultContent() {
             調整し直す
           </Link>
           <Link
-            href="/scan"
+            href="/"
             className="py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm text-center hover:opacity-90 transition-opacity"
           >
             もう一度スキャン
