@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { BrandHero } from "@/components/brand-hero";
 
 function getFatCategory(gender: string, pct: number): { label: string; color: string } {
   if (gender === "male") {
@@ -56,7 +57,14 @@ function ScanResultContent() {
   };
 
   return (
-    <main className="min-h-screen px-6 py-12 bg-white">
+    <main className="min-h-screen bg-white lg:flex">
+      {/* Left: ブランドエリア（PCでは常時表示） */}
+      <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+        <BrandHero />
+      </div>
+
+      {/* Right: スキャン結果 */}
+      <div className="px-6 py-12 lg:w-1/2 lg:max-w-none">
       <div className="max-w-lg mx-auto">
         <div className="mb-10">
           <p className="text-xs text-violet-600 font-semibold uppercase tracking-widest mb-2">Step 2</p>
@@ -140,6 +148,7 @@ function ScanResultContent() {
         >
           撮り直す
         </Link>
+      </div>
       </div>
     </main>
   );

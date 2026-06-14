@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { BrandHero } from "@/components/brand-hero";
 
 const FAT_PCT_MIN = { male: 5, female: 12 };
 const FAT_PCT_MAX = { male: 50, female: 55 };
@@ -59,7 +60,14 @@ function AdjustContent() {
   };
 
   return (
-    <main className="min-h-screen px-6 py-12 bg-white">
+    <main className="min-h-screen bg-white lg:flex">
+      {/* Left: ブランドエリア（PCでは常時表示） */}
+      <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+        <BrandHero />
+      </div>
+
+      {/* Right: 体型調整 */}
+      <div className="px-6 py-12 lg:w-1/2 lg:max-w-none">
       <div className="max-w-lg mx-auto">
         <div className="mb-10">
           <p className="text-xs text-violet-600 font-semibold uppercase tracking-widest mb-2">Step 3</p>
@@ -189,6 +197,7 @@ function AdjustContent() {
         >
           ← 戻る
         </button>
+      </div>
       </div>
     </main>
   );

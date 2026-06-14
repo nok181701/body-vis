@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { fileToBase64, saveScanPhotos } from "@/lib/scan-photo-storage";
+import { BrandHero } from "@/components/brand-hero";
 
 type Gender = "male" | "female";
 
@@ -120,24 +121,14 @@ export default function Home() {
     form.neck || form.abdomen || (form.gender === "female" && form.hip);
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Hero */}
-      <section className="px-2 py-13 text-center bg-gradient-to-b from-violet-50 to-white">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 rounded-full bg-violet-100 text-violet-700 text-sm font-semibold">
-          <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-          AIで体型変化をビジュアル化
-        </div>
-        <h1 className="text-6xl md:text-7xl font-extrabold mb-6 tracking-tight bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-          BodyVis
-        </h1>
-        <p className="max-w-xl mx-auto text-slate-500 text-sm leading-relaxed">
-          写真と基本情報を入力するだけで体型データを自動推定。
-          <br />
-          AIが理想の姿をビジュアル化。
-        </p>
-      </section>
+    <main className="min-h-screen bg-white lg:flex">
+      {/* Left: ブランドエリア（PCでは常時表示） */}
+      <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+        <BrandHero />
+      </div>
 
-      <div className="max-w-lg mx-auto px-6 py-10">
+      {/* Right: 入力スペース */}
+      <div className="max-w-lg mx-auto px-6 py-10 lg:w-1/2 lg:max-w-none">
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Photo upload */}
           <div>
