@@ -8,6 +8,7 @@ import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
 import { detectBodyRatios } from "@/lib/mediapipe/pose";
 import { estimateBody } from "@/lib/mediapipe/body-estimation";
 import type { EstimatedBody } from "@/lib/mediapipe/body-estimation";
+import { BrandHero } from "@/components/brand-hero";
 
 const STEP_LABELS = [
   "写真を読み込み中...",
@@ -97,27 +98,42 @@ function ProcessingContent() {
 
   if (error) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-white">
-        <div className="max-w-sm w-full text-center space-y-6">
-          <div className="w-16 h-16 mx-auto rounded-full bg-red-50 flex items-center justify-center">
-            <span className="text-2xl">⚠️</span>
+      <main className="min-h-screen bg-white lg:flex">
+        {/* Left: ブランドエリア（PCでは常時表示） */}
+        <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+          <BrandHero />
+        </div>
+
+        {/* Right: コンテンツ */}
+        <div className="flex flex-col items-center justify-center px-6 py-12 lg:w-1/2 lg:min-h-screen">
+          <div className="max-w-sm w-full text-center space-y-6">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-50 flex items-center justify-center">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900">解析に失敗しました</h1>
+            <p className="text-sm text-slate-500">{error}</p>
+            <Link
+              href="/"
+              className="inline-block py-3 px-8 rounded-full bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors"
+            >
+              やり直す
+            </Link>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">解析に失敗しました</h1>
-          <p className="text-sm text-slate-500">{error}</p>
-          <Link
-            href="/"
-            className="inline-block py-3 px-8 rounded-full bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors"
-          >
-            やり直す
-          </Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-white">
-      <div className="max-w-sm w-full text-center space-y-10">
+    <main className="min-h-screen bg-white lg:flex">
+      {/* Left: ブランドエリア（PCでは常時表示） */}
+      <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+        <BrandHero />
+      </div>
+
+      {/* Right: スキャン処理状況 */}
+      <div className="flex flex-col items-center justify-center px-6 py-12 lg:w-1/2 lg:min-h-screen">
+        <div className="max-w-sm w-full text-center space-y-10">
         {/* Spinner */}
         <div className="relative w-32 h-32 mx-auto">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
@@ -174,6 +190,7 @@ function ProcessingContent() {
         <p className="text-xs text-slate-300">
           写真はこの処理完了後に即時廃棄されます
         </p>
+        </div>
       </div>
     </main>
   );

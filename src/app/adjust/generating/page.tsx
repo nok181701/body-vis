@@ -8,6 +8,7 @@ import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
 import { saveGeneratedImages } from "@/lib/generated-image-storage";
 import { generateAvatar } from "@/lib/gemini/generate-avatar";
 import type { Gender } from "@/lib/gemini/avatar-prompt";
+import { BrandHero } from "@/components/brand-hero";
 
 const STEPS = [
   { label: "体組成データを送信中..." },
@@ -93,27 +94,42 @@ function GeneratingContent() {
 
   if (error) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-white">
-        <div className="max-w-sm w-full text-center space-y-6">
-          <div className="w-16 h-16 mx-auto rounded-full bg-red-50 flex items-center justify-center">
-            <span className="text-2xl">⚠️</span>
+      <main className="min-h-screen bg-white lg:flex">
+        {/* Left: ブランドエリア（PCでは常時表示） */}
+        <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+          <BrandHero />
+        </div>
+
+        {/* Right: コンテンツ */}
+        <div className="flex flex-col items-center justify-center px-6 py-12 lg:w-1/2 lg:min-h-screen">
+          <div className="max-w-sm w-full text-center space-y-6">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-50 flex items-center justify-center">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900">画像生成に失敗しました</h1>
+            <p className="text-sm text-slate-500">{error}</p>
+            <Link
+              href="/adjust"
+              className="inline-block py-3 px-8 rounded-full bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors"
+            >
+              調整画面に戻る
+            </Link>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">画像生成に失敗しました</h1>
-          <p className="text-sm text-slate-500">{error}</p>
-          <Link
-            href="/adjust"
-            className="inline-block py-3 px-8 rounded-full bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors"
-          >
-            調整画面に戻る
-          </Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-white">
-      <div className="max-w-sm w-full text-center space-y-10">
+    <main className="min-h-screen bg-white lg:flex">
+      {/* Left: ブランドエリア（PCでは常時表示） */}
+      <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+        <BrandHero />
+      </div>
+
+      {/* Right: 生成中コンテンツ */}
+      <div className="flex flex-col items-center justify-center px-6 py-12 lg:w-1/2 lg:min-h-screen">
+        <div className="max-w-sm w-full text-center space-y-10">
         {/* Animated orbs */}
         <div className="relative w-40 h-40 mx-auto">
           <div className="absolute inset-0 rounded-full bg-violet-100 animate-ping opacity-50" />
@@ -174,6 +190,7 @@ function GeneratingContent() {
         <p className="text-xs text-slate-300">
           生成された画像はGemini API（Google）のポリシーに従って処理されます
         </p>
+        </div>
       </div>
     </main>
   );

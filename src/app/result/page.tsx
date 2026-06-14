@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { clearGeneratedImages, loadGeneratedImages } from "@/lib/generated-image-storage";
+import { BrandHero } from "@/components/brand-hero";
 
 function ResultContent() {
   const searchParams = useSearchParams();
@@ -31,8 +32,24 @@ function ResultContent() {
   const weightDiff = (currentWeight - targetWeight).toFixed(1);
   const muscleDiff = (targetMuscle - currentMuscle).toFixed(1);
 
+  // 「調整し直す」用：現在の体組成データを/adjustが期待するパラメータ名で引き渡す
+  const adjustParams = new URLSearchParams({
+    gender,
+    height: searchParams.get("height") ?? "170",
+    weight: currentWeight.toString(),
+    bodyFatPct: currentFat.toString(),
+    muscleMass: currentMuscle.toString(),
+  });
+
   return (
-    <main className="min-h-screen px-6 py-12 bg-white">
+    <main className="min-h-screen bg-white lg:flex">
+      {/* Left: ブランドエリア（PCでは常時表示） */}
+      <div className="px-2 py-13 lg:w-1/2 lg:px-16 lg:py-0 lg:flex lg:items-center lg:sticky lg:top-0 lg:h-screen bg-gradient-to-b from-violet-50 to-white">
+        <BrandHero />
+      </div>
+
+      {/* Right: 結果表示 */}
+      <div className="px-6 py-12 lg:w-1/2 lg:max-w-none">
       <div className="max-w-2xl mx-auto">
         <div className="mb-10 text-center">
           <p className="text-xs text-violet-600 font-semibold uppercase tracking-widest mb-2">Result</p>
@@ -102,7 +119,7 @@ function ResultContent() {
         {/* Actions */}
         <div className="grid grid-cols-2 gap-4">
           <Link
-            href="/adjust"
+            href={`/adjust?${adjustParams.toString()}`}
             className="py-4 rounded-full border border-slate-200 text-slate-700 font-medium text-sm text-center hover:bg-slate-50 transition-colors"
           >
             調整し直す
@@ -114,6 +131,7 @@ function ResultContent() {
             もう一度スキャン
           </Link>
         </div>
+      </div>
       </div>
     </main>
   );
