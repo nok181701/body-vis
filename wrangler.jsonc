@@ -1,3 +1,5 @@
+// Wrangler（Cloudflare CLI）の設定ファイル。
+// `wrangler deploy`実行時（CDパイプライン含む）に、Workerのエントリポイントや静的アセットの配置設定として読み込まれる。
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "body-vis",
