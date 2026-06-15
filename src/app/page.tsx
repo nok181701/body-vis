@@ -182,7 +182,6 @@ export default function Home() {
               ref={frontInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={handlePhotoChange}
             />
