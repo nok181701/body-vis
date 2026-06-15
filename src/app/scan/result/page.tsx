@@ -53,7 +53,9 @@ function ScanResultContent() {
     });
     if (bodyFatPct !== undefined) params.set("bodyFatPct", bodyFatPct.toString());
     if (muscleMass !== undefined) params.set("muscleMass", muscleMass.toString());
-    router.push(`/adjust?${params.toString()}`);
+    if (waist !== undefined) params.set("waist", waist.toString());
+    if (shoulderWidth !== undefined) params.set("shoulderWidth", shoulderWidth.toString());
+    router.push(`/try-on?${params.toString()}`);
   };
 
   return (
@@ -139,7 +141,7 @@ function ScanResultContent() {
           onClick={handleNext}
           className="w-full py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-base hover:opacity-90 transition-opacity shadow-md shadow-violet-100"
         >
-          体型を調整してビジュアル生成 →
+          試着する服を選ぶ →
         </button>
 
         <Link

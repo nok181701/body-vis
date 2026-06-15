@@ -5,16 +5,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
-import { saveGeneratedImages } from "@/lib/generated-image-storage";
-import { generateAvatar } from "@/lib/gemini/generate-avatar";
-import type { Gender } from "@/lib/gemini/avatar-prompt";
+import { clearGarmentPhoto, loadGarmentPhoto } from "@/lib/garment-photo-storage";
+import { saveTryOnResult } from "@/lib/try-on-result-storage";
+import { generateTryOn } from "@/lib/gemini/generate-try-on";
+import { buildTryOnPrompt, type BodyMeasurements, type GarmentSpec, type GarmentType, type Gender } from "@/lib/gemini/try-on-prompt";
 import { BrandHero } from "@/components/brand-hero";
 
 const STEPS = [
-  { label: "体組成データを送信中..." },
-  { label: "目標体型アバターを生成中..." },
+  { label: "写真を準備中..." },
+  { label: "試着イメージを生成中..." },
   { label: "画像を最終調整中..." },
 ];
+
+function parseOptionalNumber(searchParams: URLSearchParams, key: string): number | undefined {
+  const raw = searchParams.get(key);
+  if (raw === null || raw === "") return undefined;
+  const value = parseFloat(raw);
+  return isNaN(value) ? undefined : value;
+}
 
 function GeneratingContent() {
   const router = useRouter();
@@ -29,27 +37,33 @@ function GeneratingContent() {
     runningRef.current = true;
 
     const photos = loadScanPhotos();
-    if (!photos) {
+    const garmentPhoto = loadGarmentPhoto();
+    if (!photos || !garmentPhoto) {
       router.replace("/");
       return;
     }
 
-    const gender = (searchParams.get("gender") ?? "male") as Gender;
-    const height = parseFloat(searchParams.get("height") ?? "170");
-    const currentFat = parseFloat(searchParams.get("currentFat") ?? "20");
-    const targetFat = parseFloat(searchParams.get("targetFat") ?? "15");
-    const currentWeight = parseFloat(searchParams.get("currentWeight") ?? "70");
-    const targetWeight = parseFloat(searchParams.get("targetWeight") ?? "65");
+    const body: BodyMeasurements = {
+      gender: (searchParams.get("gender") ?? "male") as Gender,
+      heightCm: parseFloat(searchParams.get("height") ?? "170"),
+      weightKg: parseFloat(searchParams.get("weight") ?? "70"),
+      waistCm: parseOptionalNumber(searchParams, "waist"),
+      shoulderWidthCm: parseOptionalNumber(searchParams, "shoulderWidth"),
+    };
 
-    const params = new URLSearchParams({
-      gender,
-      height: height.toString(),
-      currentWeight: searchParams.get("currentWeight") ?? "70",
-      currentFat: currentFat.toString(),
-      currentMuscle: searchParams.get("currentMuscle") ?? "30",
-      targetWeight: searchParams.get("targetWeight") ?? "65",
-      targetFat: targetFat.toString(),
-    });
+    const garment: GarmentSpec = {
+      type: (searchParams.get("garmentType") ?? "top") as GarmentType,
+      name: searchParams.get("garmentName") ?? undefined,
+      lengthCm: parseOptionalNumber(searchParams, "garmentLength"),
+      chestCm: parseOptionalNumber(searchParams, "garmentChest"),
+      shoulderCm: parseOptionalNumber(searchParams, "garmentShoulder"),
+      sleeveCm: parseOptionalNumber(searchParams, "garmentSleeve"),
+      waistCm: parseOptionalNumber(searchParams, "garmentWaist"),
+      riseCm: parseOptionalNumber(searchParams, "garmentRise"),
+      inseamCm: parseOptionalNumber(searchParams, "garmentInseam"),
+    };
+
+    const resultParams = new URLSearchParams(searchParams.toString());
 
     const progressInterval = setInterval(() => {
       setProgress((p) => Math.min(p + 1, 95));
@@ -59,28 +73,27 @@ function GeneratingContent() {
       setStepIndex(0);
 
       setStepIndex(1);
-      const goalResult = await generateAvatar({
-        photo: photos.front,
-        gender,
-        height,
-        bodyFatPct: targetFat,
-        weightKg: currentWeight,
-        weightDiffKg: targetWeight - currentWeight,
+      const prompt = buildTryOnPrompt(body, garment);
+      const result = await generateTryOn({
+        personPhoto: photos.front,
+        garmentPhoto,
+        prompt,
       });
-      if (!goalResult.success) {
-        setError(goalResult.error);
+      if (!result.success) {
+        setError(result.error);
         return;
       }
 
       setStepIndex(2);
-      saveGeneratedImages({
-        currentImage: `data:image/jpeg;base64,${photos.front}`,
-        goalImage: `data:image/png;base64,${goalResult.image}`,
+      saveTryOnResult({
+        personImage: `data:image/jpeg;base64,${photos.front}`,
+        tryOnImage: `data:image/png;base64,${result.image}`,
       });
       clearScanPhotos();
+      clearGarmentPhoto();
 
       setProgress(100);
-      setTimeout(() => router.push(`/result?${params.toString()}`), 400);
+      setTimeout(() => router.push(`/result?${resultParams.toString()}`), 400);
     })().catch((e) => {
       setError(e instanceof Error ? e.message : "画像生成に失敗しました。もう一度お試しください。");
     }).finally(() => {
@@ -109,10 +122,10 @@ function GeneratingContent() {
             <h1 className="text-xl font-bold text-slate-900">画像生成に失敗しました</h1>
             <p className="text-sm text-slate-500">{error}</p>
             <Link
-              href="/adjust"
+              href="/try-on"
               className="inline-block py-3 px-8 rounded-full bg-violet-600 text-white font-bold text-sm hover:bg-violet-700 transition-colors"
             >
-              調整画面に戻る
+              試着画面に戻る
             </Link>
           </div>
         </div>
@@ -157,7 +170,7 @@ function GeneratingContent() {
 
         <div>
           <h1 className="text-2xl font-bold mb-3 text-slate-900">AI画像を生成中</h1>
-          <p className="text-slate-500 text-sm">Gemini AIが体型アバターを作成しています</p>
+          <p className="text-slate-500 text-sm">Gemini AIが試着イメージを作成しています</p>
           <p className="text-slate-300 text-xs mt-1">完了まで10〜20秒かかります</p>
         </div>
 
