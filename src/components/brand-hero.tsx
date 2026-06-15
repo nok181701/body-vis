@@ -11,7 +11,7 @@ export function BrandHero() {
       <p className="max-w-xl mx-auto lg:mx-0 text-slate-500 text-sm leading-relaxed">
         写真と基本情報を入力するだけで体型データを自動推定。
         <br />
-        AIが理想の姿をビジュアル化。
+        服の画像を選ぶだけで、AIがあなたに試着させたイメージを生成。
       </p>
     </div>
   );
