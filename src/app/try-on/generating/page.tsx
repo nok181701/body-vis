@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
+import { loadScanPhotos } from "@/lib/scan-photo-storage";
 import { clearGarmentPhoto, loadGarmentPhoto } from "@/lib/garment-photo-storage";
 import { saveTryOnResult } from "@/lib/try-on-result-storage";
 import { generateTryOn } from "@/lib/gemini/generate-try-on";
@@ -94,7 +94,6 @@ function GeneratingContent() {
         personImage: `data:image/jpeg;base64,${photos.front}`,
         tryOnImage: `data:image/png;base64,${result.image}`,
       });
-      clearScanPhotos();
       clearGarmentPhoto();
 
       setProgress(100);
