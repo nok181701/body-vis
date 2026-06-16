@@ -7,6 +7,7 @@ const STORAGE_KEY = "bodyvis:scan-photos";
 
 export interface ScanPhotos {
   front: string;
+  side?: string; // 側面写真（任意）
 }
 
 export function saveScanPhotos(photos: ScanPhotos) {
