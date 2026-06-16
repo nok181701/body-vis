@@ -18,11 +18,13 @@ interface FormData {
   abdomen: string;
   hip: string;
   frontPhoto: File | null;
+  sidePhoto: File | null;
 }
 
 export default function Home() {
   const router = useRouter();
   const frontInputRef = useRef<HTMLInputElement>(null);
+  const sideInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<FormData>({
     gender: "",
@@ -33,21 +35,33 @@ export default function Home() {
     abdomen: "",
     hip: "",
     frontPhoto: null,
+    sidePhoto: null,
   });
 
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
+  const [sidePreview, setSidePreview] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof FormData | "consent", string>>
   >({});
   const [submitting, setSubmitting] = useState(false);
 
-  const handlePhotoChange = useCallback(
+  const handleFrontPhotoChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       setFrontPreview(URL.createObjectURL(file));
       setForm((prev) => ({ ...prev, frontPhoto: file }));
+    },
+    [],
+  );
+
+  const handleSidePhotoChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setSidePreview(URL.createObjectURL(file));
+      setForm((prev) => ({ ...prev, sidePhoto: file }));
     },
     [],
   );
@@ -67,7 +81,6 @@ export default function Home() {
     if (!form.frontPhoto) newErrors.frontPhoto = "正面写真を選択してください";
     if (!consent) newErrors.consent = "同意が必要です";
 
-    // 任意項目のバリデーション（入力した場合のみ）
     if (form.neck) {
       const n = parseFloat(form.neck);
       if (isNaN(n) || n < 20 || n > 60)
@@ -96,7 +109,8 @@ export default function Home() {
     setSubmitting(true);
     try {
       const front = await fileToBase64(form.frontPhoto);
-      saveScanPhotos({ front });
+      const side = form.sidePhoto ? await fileToBase64(form.sidePhoto) : undefined;
+      saveScanPhotos({ front, side });
 
       const params = new URLSearchParams({
         gender: form.gender,
@@ -118,9 +132,6 @@ export default function Home() {
     }
   };
 
-  const hasCircumference =
-    form.neck || form.abdomen || (form.gender === "female" && form.hip);
-
   return (
     <main className="min-h-screen bg-white lg:flex">
       {/* Left: ブランドエリア（PCでは常時表示） */}
@@ -131,64 +142,70 @@ export default function Home() {
       {/* Right: 入力スペース */}
       <div className="max-w-lg mx-auto px-6 py-10 lg:w-1/2 lg:max-w-none">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Photo upload */}
+
+          {/* Photo upload: 正面 + 側面 */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-slate-700">
-              正面写真
-            </label>
-            <button
-              type="button"
-              onClick={() => frontInputRef.current?.click()}
-              className={`w-full aspect-[3/4] max-w-xs mx-auto rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden relative ${
-                errors.frontPhoto
-                  ? "border-red-300 bg-red-50"
-                  : "border-slate-300 bg-slate-50 hover:border-violet-400 hover:bg-violet-50"
-              }`}
-            >
-              {frontPreview ? (
-                <Image
-                  src={frontPreview}
-                  alt="正面写真"
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <>
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="text-violet-300"
-                  >
-                    <path
-                      d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="13"
-                      r="3.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                  </svg>
-                  <span className="text-xs text-slate-400">タップして選択</span>
-                </>
-              )}
-            </button>
-            <input
-              ref={frontInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoChange}
-            />
-            {errors.frontPhoto && (
-              <p className="mt-1 text-xs text-red-500">{errors.frontPhoto}</p>
-            )}
+            <div className="grid grid-cols-2 gap-4">
+              {/* 正面写真（必須） */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-slate-700">
+                  正面写真 <span className="text-red-400">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => frontInputRef.current?.click()}
+                  className={`w-full aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden relative ${
+                    errors.frontPhoto
+                      ? "border-red-300 bg-red-50"
+                      : "border-slate-300 bg-slate-50 hover:border-violet-400 hover:bg-violet-50"
+                  }`}
+                >
+                  {frontPreview ? (
+                    <Image src={frontPreview} alt="正面写真" fill className="object-cover" />
+                  ) : (
+                    <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-violet-300">
+                        <path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                        <circle cx="12" cy="13" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                      </svg>
+                      <span className="text-xs text-slate-400">タップして選択</span>
+                    </>
+                  )}
+                </button>
+                <input ref={frontInputRef} type="file" accept="image/*" className="hidden" onChange={handleFrontPhotoChange} />
+                {errors.frontPhoto && (
+                  <p className="mt-1 text-xs text-red-500">{errors.frontPhoto}</p>
+                )}
+              </div>
+
+              {/* 側面写真（任意・精度向上） */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-slate-700">
+                  側面写真{" "}
+                  <span className="text-xs font-normal text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full">
+                    精度UP
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => sideInputRef.current?.click()}
+                  className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden relative border-slate-300 bg-slate-50 hover:border-violet-400 hover:bg-violet-50"
+                >
+                  {sidePreview ? (
+                    <Image src={sidePreview} alt="側面写真" fill className="object-cover" />
+                  ) : (
+                    <>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-slate-300">
+                        <path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                        <circle cx="12" cy="13" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                      </svg>
+                      <span className="text-xs text-slate-400">任意</span>
+                    </>
+                  )}
+                </button>
+                <input ref={sideInputRef} type="file" accept="image/*" className="hidden" onChange={handleSidePhotoChange} />
+              </div>
+            </div>
           </div>
 
           {/* Tips */}
@@ -196,15 +213,14 @@ export default function Home() {
             <p className="font-medium text-violet-700 mb-2">撮影のコツ</p>
             <p>• 全身が映るよう1.5〜2m離れて撮影</p>
             <p>• 背景はシンプルな壁</p>
-            <p>• 正面を向いて真っ直ぐ立つ</p>
+            <p>• 正面を向いて真っ直ぐ立つ（正面写真）</p>
+            <p>• 真横を向いて真っ直ぐ立つ（側面写真）</p>
             <p>• 腕は体から少し離し、自然に下ろした状態で撮影</p>
           </div>
 
           {/* Gender */}
           <div>
-            <label className="block text-sm font-medium mb-3 text-slate-700">
-              性別
-            </label>
+            <label className="block text-sm font-medium mb-3 text-slate-700">性別</label>
             <div className="grid grid-cols-2 gap-3">
               {(["male", "female"] as Gender[]).map((g) => (
                 <button
@@ -228,109 +244,42 @@ export default function Home() {
 
           {/* Basic info */}
           <div className="grid grid-cols-3 gap-4">
-            <NumberField
-              label="身長"
-              unit="cm"
-              value={form.height}
-              onChange={(v) => setForm((p) => ({ ...p, height: v }))}
-              placeholder="170"
-              error={errors.height}
-            />
-            <NumberField
-              label="体重"
-              unit="kg"
-              value={form.weight}
-              onChange={(v) => setForm((p) => ({ ...p, weight: v }))}
-              placeholder="70"
-              error={errors.weight}
-            />
-            <NumberField
-              label="年齢"
-              unit="歳"
-              value={form.age}
-              onChange={(v) => setForm((p) => ({ ...p, age: v }))}
-              placeholder="25"
-              error={errors.age}
-            />
+            <NumberField label="身長" unit="cm" value={form.height} onChange={(v) => setForm((p) => ({ ...p, height: v }))} placeholder="170" error={errors.height} />
+            <NumberField label="体重" unit="kg" value={form.weight} onChange={(v) => setForm((p) => ({ ...p, weight: v }))} placeholder="70" error={errors.weight} />
+            <NumberField label="年齢" unit="歳" value={form.age} onChange={(v) => setForm((p) => ({ ...p, age: v }))} placeholder="25" error={errors.age} />
           </div>
 
-          {/* Circumference measurements (optional, Navy method) */}
+          {/* Circumference measurements (optional) */}
           <div className="rounded-2xl border border-slate-200 overflow-hidden">
             <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">
-                  周囲計測（任意）
-                </p>
-                {hasCircumference && (
-                  <span className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                    Navy式で計算
-                  </span>
-                )}
-              </div>
+              <p className="text-sm font-semibold text-slate-700">周囲計測（任意）</p>
               <p className="text-xs text-slate-400 mt-0.5">
-                入力すると米海軍式（Navy式）でより正確に体脂肪率を推定します
+                入力するとウエスト・首回りの推定精度が向上します
               </p>
             </div>
             <div className="p-4 space-y-4">
-              <div
-                className={`grid gap-4 ${form.gender === "female" ? "grid-cols-3" : "grid-cols-2"}`}
-              >
-                <NumberField
-                  label="首回り"
-                  unit="cm"
-                  value={form.neck}
-                  onChange={(v) => setForm((p) => ({ ...p, neck: v }))}
-                  placeholder="38"
-                  error={errors.neck}
-                />
-                <NumberField
-                  label="腹囲"
-                  unit="cm"
-                  value={form.abdomen}
-                  onChange={(v) => setForm((p) => ({ ...p, abdomen: v }))}
-                  placeholder="80"
-                  error={errors.abdomen}
-                />
+              <div className={`grid gap-4 ${form.gender === "female" ? "grid-cols-3" : "grid-cols-2"}`}>
+                <NumberField label="首回り" unit="cm" value={form.neck} onChange={(v) => setForm((p) => ({ ...p, neck: v }))} placeholder="38" error={errors.neck} />
+                <NumberField label="腹囲" unit="cm" value={form.abdomen} onChange={(v) => setForm((p) => ({ ...p, abdomen: v }))} placeholder="80" error={errors.abdomen} />
                 {form.gender === "female" && (
-                  <NumberField
-                    label="ヒップ"
-                    unit="cm"
-                    value={form.hip}
-                    onChange={(v) => setForm((p) => ({ ...p, hip: v }))}
-                    placeholder="90"
-                    error={errors.hip}
-                  />
+                  <NumberField label="ヒップ" unit="cm" value={form.hip} onChange={(v) => setForm((p) => ({ ...p, hip: v }))} placeholder="90" error={errors.hip} />
                 )}
               </div>
               <div className="text-xs text-slate-400 space-y-0.5">
                 <p>• 首回り：喉仏の少し下で水平に</p>
                 <p>• 腹囲：へその高さで水平に</p>
-                {form.gender === "female" && (
-                  <p>• ヒップ：最も太い部分で水平に</p>
-                )}
+                {form.gender === "female" && <p>• ヒップ：最も太い部分で水平に</p>}
               </div>
             </div>
           </div>
 
           {/* Consent */}
-          <div
-            className={`p-4 rounded-xl border ${
-              errors.consent
-                ? "border-red-300 bg-red-50"
-                : "border-slate-200 bg-slate-50"
-            }`}
-          >
+          <div className={`p-4 rounded-xl border ${errors.consent ? "border-red-300 bg-red-50" : "border-slate-200 bg-slate-50"}`}>
             <label className="flex gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-violet-600"
-              />
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 w-4 h-4 accent-violet-600" />
               <span className="text-sm text-slate-600 leading-relaxed">
                 写真はブラウザ上でMediaPipeにより解析されます。
-                体組成データおよび写真はGemini
-                API（Google）へ送信されることに同意します。
+                体型データおよび服の写真はGemini API（Google）へ送信されることに同意します。
               </span>
             </label>
             {errors.consent && (

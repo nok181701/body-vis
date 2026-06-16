@@ -12,10 +12,13 @@ export interface BodyMeasurements {
   gender: Gender;
   heightCm: number;
   weightKg: number;
-  /** ウエスト（cm）。MediaPipe推定値が無い場合はundefined */
-  waistCm?: number;
-  /** 肩幅（cm）。MediaPipe推定値が無い場合はundefined */
   shoulderWidthCm?: number;
+  bustGirthCm?: number;
+  waistCm?: number;
+  hipGirthCm?: number;
+  insideLegHeightCm?: number;
+  sleeveLengthCm?: number;
+  neckGirthCm?: number;
 }
 
 export interface GarmentSpec {
@@ -58,8 +61,13 @@ function buildBodyMeasurementsSection(body: BodyMeasurements): string {
     `Height: ${body.heightCm}cm`,
     `Weight: ${body.weightKg}kg`,
   ];
-  if (body.waistCm !== undefined) lines.push(`Waist: ${body.waistCm}cm`);
   if (body.shoulderWidthCm !== undefined) lines.push(`Shoulder width: ${body.shoulderWidthCm}cm`);
+  if (body.bustGirthCm !== undefined)     lines.push(`Bust/chest girth: ${body.bustGirthCm}cm`);
+  if (body.waistCm !== undefined)         lines.push(`Waist girth: ${body.waistCm}cm`);
+  if (body.hipGirthCm !== undefined)      lines.push(`Hip girth: ${body.hipGirthCm}cm`);
+  if (body.insideLegHeightCm !== undefined) lines.push(`Inseam: ${body.insideLegHeightCm}cm`);
+  if (body.sleeveLengthCm !== undefined)  lines.push(`Sleeve length (back neck to wrist): ${body.sleeveLengthCm}cm`);
+  if (body.neckGirthCm !== undefined)     lines.push(`Neck girth: ${body.neckGirthCm}cm`);
   return `Body measurements:\n${lines.join("\n")}`;
 }
 

@@ -161,19 +161,35 @@ function ResultContent() {
         </p>
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-4">
-          <Link
-            href={`/try-on?${tryOnParams.toString()}`}
-            className="py-4 rounded-full border border-slate-200 text-slate-700 font-medium text-sm text-center hover:bg-slate-50 transition-colors"
-          >
-            別の服で試着する
-          </Link>
-          <Link
-            href="/"
-            className="py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm text-center hover:opacity-90 transition-opacity"
-          >
-            もう一度スキャン
-          </Link>
+        <div className="space-y-3">
+          {images?.tryOnImage && (
+            <a
+              href={images.tryOnImage}
+              download="tryon-result.png"
+              className="flex items-center justify-center gap-2 w-full py-4 rounded-full bg-violet-50 border border-violet-200 text-violet-700 font-bold text-sm hover:bg-violet-100 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              試着画像を保存する
+            </a>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <Link
+              href={`/try-on?${tryOnParams.toString()}`}
+              className="py-4 rounded-full border border-slate-200 text-slate-700 font-medium text-sm text-center hover:bg-slate-50 transition-colors"
+            >
+              別の服で試着する
+            </Link>
+            <Link
+              href="/"
+              className="py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm text-center hover:opacity-90 transition-opacity"
+            >
+              もう一度スキャン
+            </Link>
+          </div>
         </div>
       </div>
       </div>

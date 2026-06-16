@@ -1,9 +1,13 @@
 /**
- * MediaPipeの姿勢推定結果とユーザー入力から体組成を推定する。
+ * MediaPipeの姿勢推定結果・側面解析結果・ユーザー入力から体型各部の寸法を推定する。
+ *
+ * 側面写真が提供された場合: 胸囲・ヒップは実測奥行きを使って楕円断面から計算
+ * 側面写真なしの場合: 統計的な奥行き比率（性別別の平均値）で推定
  */
 
 import type { BodyRatios } from "./pose";
-import { NAVY, DEURENBERG, BODY, FAT_BOUNDS } from "./const";
+import type { SideDepths } from "./side-silhouette";
+import { BODY, LIMB } from "./const";
 
 /** スキャン画面で入力されるユーザーの基本情報と任意の周囲計測値 */
 export interface UserInput {
@@ -11,75 +15,41 @@ export interface UserInput {
   height: number;
   weight: number;
   age: number;
-  neck?: number; // cm
-  abdomen?: number; // cm
-  hip?: number; // cm、女性のみ
+  neck?: number;    // cm（首回り直接入力）
+  abdomen?: number; // cm（ウエスト直接入力）
+  hip?: number;     // cm（ヒップ直接入力、女性のみ）
 }
 
-/** 写真解析・推定式から算出した体組成の推定結果 */
+/** 写真解析・推定式から算出した体型寸法 */
 export interface EstimatedBody {
-  bodyFatPct: number; // %
-  muscleMass: number; // kg
-  shoulderWidth: number; // cm
-  waist: number; // cm
-  method: "navy" | "deurenberg";
+  shoulderWidth: number;    // cm（肩幅）
+  bustGirth: number;        // cm（胸囲）
+  waist: number;            // cm（ウエスト）
+  hipGirth: number;         // cm（ヒップ）
+  insideLegHeight: number;  // cm（股下）
+  sleeveLength: number;     // cm（袖丈）
+  neckGirth: number;        // cm（首回り）
 }
 
-/** 首回り・腹囲（女性はヒップも）から米海軍式で体脂肪率を計算する。計測値が不足している場合は null を返す */
-function estimateByNavy(user: UserInput): number | null {
-  const { gender, height, neck, abdomen, hip } = user;
-  if (!neck || !abdomen) return null;
-
-  if (gender === "male") {
-    const diff = abdomen - neck;
-    if (diff <= 0) return null;
-    return (
-      NAVY.MALE.A * Math.log10(diff) -
-      NAVY.MALE.B * Math.log10(height) +
-      NAVY.MALE.C
-    );
-  } else {
-    if (!hip) return null;
-    const sum = abdomen + hip - neck;
-    if (sum <= 0) return null;
-    return (
-      NAVY.FEMALE.A * Math.log10(sum) -
-      NAVY.FEMALE.B * Math.log10(height) +
-      NAVY.FEMALE.C
-    );
-  }
+/**
+ * 楕円断面近似で周長を算出する。
+ * width と depth はそれぞれ断面の直径（半径ではない）。
+ * 楕円の周長 ≈ π(a + b) で、a = width/2、b = depth/2 なので π(width + depth)/2
+ */
+function ellipseGirth(width: number, depth: number): number {
+  return Math.round((Math.PI * (width + depth)) / 2 * 10) / 10;
 }
 
-/** BMI・年齢・性別からDeurenberg式で体脂肪率を計算する。周囲計測値がない場合のフォールバック */
-function estimateByDeurenberg(user: UserInput): number {
-  const { gender, weight, height, age } = user;
-  const bmi = weight / (height / 100) ** 2;
-  const constant =
-    gender === "male" ? DEURENBERG.MALE_CONSTANT : DEURENBERG.FEMALE_CONSTANT;
-  return DEURENBERG.BMI_COEFF * bmi + DEURENBERG.AGE_COEFF * age - constant;
-}
-
-/** MediaPipeの姿勢推定結果とユーザー入力を組み合わせて体組成を推定する */
+/** MediaPipeの姿勢推定結果とユーザー入力を組み合わせて体型各部の寸法を推定する */
 export function estimateBody(
   user: UserInput,
   ratios: BodyRatios | null,
+  sideDepths: SideDepths | null = null,
 ): EstimatedBody {
   const { gender, height, weight } = user;
-  const fatMin = FAT_BOUNDS.MIN[gender];
-  const fatMax = FAT_BOUNDS.MAX[gender];
+  const bmi = weight / (height / 100) ** 2;
 
-  const navyRaw = estimateByNavy(user);
-  const method: "navy" | "deurenberg" =
-    navyRaw !== null ? "navy" : "deurenberg";
-  const rawFat = navyRaw ?? estimateByDeurenberg(user);
-  const bodyFatPct =
-    Math.round(Math.max(fatMin, Math.min(fatMax, rawFat)) * 10) / 10;
-
-  const leanMass = weight * (1 - bodyFatPct / 100);
-  const muscleMass =
-    Math.round(leanMass * BODY.SKELETAL_MUSCLE_RATIO * 10) / 10;
-
-  // LANDMARK_CALIBRATION: ランドマーク11/12は肩関節中心を指すためメジャー計測点（肩峰）より内側になる。実測値との比較から導出。
+  // 肩幅: LANDMARK_CALIBRATION は肩関節中心 → 肩峰（実測点）への補正
   const shoulderWidth = ratios
     ? Math.round(
         ratios.shoulderWidthRatio *
@@ -90,10 +60,25 @@ export function estimateBody(
       ) / 10
     : Math.round(height * BODY.DEFAULT_SHOULDER_RATIO * 10) / 10;
 
+  // 胸囲: 肩幅から胸幅を推定し、奥行きと合わせて楕円断面で周長を算出
+  // 側面計測値があれば実測奥行きを使用、なければ統計的な比率で代替
+  const bustWidth =
+    shoulderWidth *
+    (gender === "male"
+      ? LIMB.BUST_TO_SHOULDER_RATIO_MALE
+      : LIMB.BUST_TO_SHOULDER_RATIO_FEMALE);
+  const bustDepth =
+    sideDepths?.chestDepth ??
+    bustWidth *
+      (gender === "male"
+        ? LIMB.BUST_DEPTH_WIDTH_RATIO_MALE
+        : LIMB.BUST_DEPTH_WIDTH_RATIO_FEMALE);
+  const bustGirth = ellipseGirth(bustWidth, bustDepth);
+
+  // ウエスト: 直接入力があればその値を使用。なければBMIからWHtRを推定
   const waist = user.abdomen
     ? user.abdomen
     : (() => {
-        const bmi = weight / (height / 100) ** 2;
         const baseWhtr =
           gender === "male" ? BODY.BASE_WHTR_MALE : BODY.BASE_WHTR_FEMALE;
         return (
@@ -103,5 +88,73 @@ export function estimateBody(
         );
       })();
 
-  return { bodyFatPct, muscleMass, shoulderWidth, waist, method };
+  // ヒップ: MediaPipeの腰幅比率 → 実寸幅 → 楕円断面で周長を算出
+  // 直接入力 > 側面実測 > 統計比率の優先順
+  const hipGirth = (() => {
+    if (user.hip) return user.hip;
+
+    const hipWidth = ratios
+      ? Math.round(
+          ratios.hipWidthRatio *
+            height *
+            BODY.SHOULDER_ANKLE_RATIO *
+            LIMB.HIP_CALIBRATION *
+            10,
+        ) / 10
+      : shoulderWidth * 0.95;
+
+    const hipDepth =
+      sideDepths?.hipDepth ??
+      hipWidth *
+        (gender === "male"
+          ? LIMB.HIP_DEPTH_WIDTH_RATIO_MALE
+          : LIMB.HIP_DEPTH_WIDTH_RATIO_FEMALE);
+
+    return ellipseGirth(hipWidth, hipDepth);
+  })();
+
+  // 股下: MediaPipeの腰〜足首比率 × 身長スケール（腰関節〜股下オフセットを減算）
+  const insideLegHeight =
+    ratios?.inseamRatio != null
+      ? Math.max(
+          Math.round(
+            (ratios.inseamRatio * height * BODY.SHOULDER_ANKLE_RATIO -
+              LIMB.INSEAM_CROTCH_OFFSET) *
+              10,
+          ) / 10,
+          0,
+        )
+      : Math.round(height * LIMB.INSEAM_FALLBACK_RATIO * 10) / 10;
+
+  // 袖丈: MediaPipeの肩〜手首距離比率 × 身長スケール + 後頸点〜肩峰オフセット
+  const sleeveLength =
+    ratios?.sleeveRatio != null
+      ? Math.round(
+          (ratios.sleeveRatio * height * BODY.SHOULDER_ANKLE_RATIO +
+            LIMB.SLEEVE_NECK_OFFSET) *
+            10,
+        ) / 10
+      : Math.round(height * LIMB.SLEEVE_FALLBACK_RATIO * 10) / 10;
+
+  // 首回り: 直接入力があればその値を使用。なければ身長比 × 性別係数 + BMI補正で推定
+  const neckGirth = user.neck
+    ? user.neck
+    : Math.round(
+        (height *
+          (gender === "male"
+            ? LIMB.NECK_GIRTH_RATIO_MALE
+            : LIMB.NECK_GIRTH_RATIO_FEMALE) +
+          (bmi - 22) * LIMB.NECK_BMI_COEFF) *
+          10,
+      ) / 10;
+
+  return {
+    shoulderWidth,
+    bustGirth,
+    waist,
+    hipGirth,
+    insideLegHeight,
+    sleeveLength,
+    neckGirth,
+  };
 }

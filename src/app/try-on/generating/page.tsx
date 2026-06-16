@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { clearScanPhotos, loadScanPhotos } from "@/lib/scan-photo-storage";
+import { loadScanPhotos } from "@/lib/scan-photo-storage";
 import { clearGarmentPhoto, loadGarmentPhoto } from "@/lib/garment-photo-storage";
 import { saveTryOnResult } from "@/lib/try-on-result-storage";
 import { generateTryOn } from "@/lib/gemini/generate-try-on";
@@ -47,8 +47,13 @@ function GeneratingContent() {
       gender: (searchParams.get("gender") ?? "male") as Gender,
       heightCm: parseFloat(searchParams.get("height") ?? "170"),
       weightKg: parseFloat(searchParams.get("weight") ?? "70"),
-      waistCm: parseOptionalNumber(searchParams, "waist"),
       shoulderWidthCm: parseOptionalNumber(searchParams, "shoulderWidth"),
+      bustGirthCm: parseOptionalNumber(searchParams, "bustGirth"),
+      waistCm: parseOptionalNumber(searchParams, "waist"),
+      hipGirthCm: parseOptionalNumber(searchParams, "hipGirth"),
+      insideLegHeightCm: parseOptionalNumber(searchParams, "insideLegHeight"),
+      sleeveLengthCm: parseOptionalNumber(searchParams, "sleeveLength"),
+      neckGirthCm: parseOptionalNumber(searchParams, "neckGirth"),
     };
 
     const garment: GarmentSpec = {
@@ -89,7 +94,6 @@ function GeneratingContent() {
         personImage: `data:image/jpeg;base64,${photos.front}`,
         tryOnImage: `data:image/png;base64,${result.image}`,
       });
-      clearScanPhotos();
       clearGarmentPhoto();
 
       setProgress(100);
