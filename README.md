@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BodyVis
 
-## Getting Started
+自分の写真でバーチャル試着を体感できるWebアプリケーションです。
 
-First, run the development server:
+- 写真1枚と基本情報を入力するだけで体型データを自動推定
+- 服の画像と寸法を入力すると、AIが自分の写真にその服を試着させたイメージを生成
+- 服の寸法と身体推定値からフィット感（ゆったり／ジャストフィット／タイト）を表示
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 技術スタック
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| レイヤー       | 技術                                      | 備考                             |
+| -------------- | ----------------------------------------- | -------------------------------- |
+| フロントエンド | Next.js (App Router)                      |                                  |
+| スタイリング   | Tailwind CSS                              |                                  |
+| デプロイ       | Cloudflare Pages / Workers                | `@opennextjs/cloudflare` を使用  |
+| 体型推定       | MediaPipe Pose + 推定モデル               | ブラウザ上で完結（サーバー不要） |
+| 画像生成AI     | Gemini API (`gemini-3-pro-image-preview`) | バーチャル試着画像生成           |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 体型推定ロジック
 
-To learn more about Next.js, take a look at the following resources:
+### MediaPipe Pose（`src/lib/mediapipe/pose.ts`）
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `@mediapipe/tasks-vision` パッケージを使用
+- 正面写真から33点の関節座標を取得（`runningMode: "IMAGE"`）
+- 肩幅・腰幅・胴体比率などを正規化座標から計算
+- x/y座標は独立して正規化されるため、画像アスペクト比で補正が必要
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 推定式（`src/lib/mediapipe/body-estimation.ts`）
 
-## Deploy on Vercel
+| 項目     | 推定方法                                               |
+| -------- | ------------------------------------------------------ |
+| 体脂肪率 | Deurenberg式（BMI + 年齢 + 性別）                      |
+| 骨格筋量 | 除脂肪体重 × 0.55                                      |
+| 肩幅     | MediaPipe比率 × 身長 × 0.82 × 1.37（ランドマーク補正） |
+| ウエスト | WHtR（ウエスト÷身長比）をBMIから推定                   |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## データの取り扱い
+
+- **写真はサーバーに保存しない** — ブラウザ上で処理し、`sessionStorage` で一時保持後に廃棄する
+- 体組成の計測値・服の寸法・生成画像などはブラウザ内（`sessionStorage`）のみで完結し、DBやサーバーには永続化しない
+- Gemini APIへの画像送信についてはGoogleのポリシーに従う
+
+---
+
+## Gemini API 画像生成
+
+バーチャル試着画像は、本人写真と服画像の2枚をGeminiに渡し、身体計測値・服仕様・服タイプ別の着せ替え指示をプロンプトとして付与して生成する（`src/lib/gemini/try-on-prompt.ts` / `src/lib/gemini/generate-try-on.ts`）。
+
+### 服タイプ
+
+| タイプ              | 入力する寸法           | 着せ替え指示                           |
+| ------------------- | ---------------------- | -------------------------------------- |
+| トップス（top）     | 着丈・身幅・肩幅・袖丈 | 上半身の服を置き換え、下半身の服は保持 |
+| ボトムス（bottom）  | ウエスト・股上・股下   | 下半身の服を置き換え、上半身の服は保持 |
+| アウター（outer）   | 着丈・身幅・肩幅・袖丈 | 既存の服の上にレイヤリング             |
+| ワンピース（dress） | 着丈・身幅・ウエスト   | 上半身・下半身の服を置き換え           |
+
+### プロンプト構成（`buildTryOnPrompt`）
+
+1. **身体計測セクション**: 性別・身長・体重・（取得できていれば）ウエスト・肩幅をcm単位で明記
+2. **服仕様セクション**: 服タイプ・名称・各寸法をcm単位で明記
+3. **服タイプ別指示**: 上表の着せ替え指示
+4. **制約**: 顔・identity・ポーズ・背景・照明は変更禁止／体型のサイズ変更も禁止し、服の寸法どおりの実際のフィット感（ゆったり・タイト等）を写真上で表現すること／photorealisticな本人の写真であること
+
+---
+
+## プライバシー・セキュリティ
+
+| 項目         | 対応内容                                                   |
+| ------------ | ---------------------------------------------------------- |
+| 写真の非保存 | 写真はブラウザ上で処理、サーバーには送信・保存しない       |
+| データ最小化 | 必要最小限のデータのみ収集・送信                           |
+| 第三者送信   | Gemini APIへの送信についてGoogleのポリシーをユーザーに明示 |
