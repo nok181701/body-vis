@@ -22,7 +22,7 @@
 
 ## レンダリング・実行方式
 
-- 全ページ **CSR**（MediaPipeがブラウザ専用のため）
+- 全ページ **CSR**
 - Gemini呼び出し（`generate-try-on.ts`）のみAPIキー保護のため **Server Actions** で実行し、Cloudflare Workers上で動作する
 
 ---
